@@ -4,10 +4,15 @@
 
 > 프로토타입입니다. 은행 데이터는 모두 가상이며 실제 이체·조회는 이뤄지지 않습니다.
 
-## 실행
+## 라이브 데모
+
+**https://eclectic-wisp-2dfbc4.netlify.app**
+
+진동은 Android Chrome·삼성 인터넷 등에서 동작하며, 미지원 환경(iOS Safari 등)에서는 소리와 화면으로 대체됩니다.
+
+## 실행 (로컬)
 
 빌드 과정이 없습니다. `index.html`을 브라우저로 열면 됩니다.
-진동은 Android Chrome·삼성 인터넷 등에서 동작하며, 미지원 환경(iOS Safari 등)에서는 소리와 화면으로 대체됩니다.
 
 ```
 open index.html      # macOS
