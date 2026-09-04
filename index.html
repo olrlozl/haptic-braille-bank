@@ -1,0 +1,1860 @@
+<title>진동 점자 뱅킹</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#EBE8DF; --surface:#FBFAF6; --surface-2:#E4E0D4;
+    --ink:#1D1E1A; --ink-soft:#59584C; --ink-faint:#8C8A7C; --hairline:#D3CEBE;
+    --dot-raised:#1D1E1A; --dot-raised-hi:#3A3B33; --dot-flat-ring:#B7B2A1;
+    --accent:#0E7C7B; --accent-strong:#0B5E5D; --accent-glow:rgba(14,124,123,.28);
+    --warm:#A6701A; --danger:#B23A2E;
+    --pos:#2E7D5B; --neg:#B23A2E;
+    --shadow:0 1px 2px rgba(30,28,20,.06), 0 8px 24px rgba(30,28,20,.07);
+    --px-per-mm:3.7795;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#131410; --surface:#1D1E19; --surface-2:#282920;
+      --ink:#ECEADF; --ink-soft:#A2A093; --ink-faint:#78766A; --hairline:#34352B;
+      --dot-raised:#ECEADF; --dot-raised-hi:#FFFFFF; --dot-flat-ring:rgba(236,234,223,.24);
+      --accent:#3FD0C9; --accent-strong:#7BE4DE; --accent-glow:rgba(63,208,201,.24);
+      --warm:#E0A93C; --danger:#E8756A; --pos:#5FD3A3; --neg:#E8756A;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#131410; --surface:#1D1E19; --surface-2:#282920;
+    --ink:#ECEADF; --ink-soft:#A2A093; --ink-faint:#78766A; --hairline:#34352B;
+    --dot-raised:#ECEADF; --dot-raised-hi:#FFFFFF; --dot-flat-ring:rgba(236,234,223,.24);
+    --accent:#3FD0C9; --accent-strong:#7BE4DE; --accent-glow:rgba(63,208,201,.24);
+    --warm:#E0A93C; --danger:#E8756A; --pos:#5FD3A3; --neg:#E8756A;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.4);
+  }
+
+  *,*::before,*::after{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;
+    font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:480px;margin:0 auto;padding:20px 16px 64px}
+  @media (min-width:520px){ .wrap{padding:36px 24px 80px} }
+
+  h1,h2,h3{margin:0;text-wrap:balance;letter-spacing:-.01em}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent-strong);font-weight:600}
+  .lead{color:var(--ink-soft);font-size:14.5px;margin-top:9px}
+  a{color:var(--accent-strong)}
+  button{font-family:inherit}
+
+  header{margin-bottom:18px}
+  .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:9px 0 2px}
+  .brand .en{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:clamp(26px,7.6vw,36px);line-height:1;letter-spacing:-.02em}
+  h1{font-family:"IBM Plex Sans KR",sans-serif;font-weight:700;font-size:clamp(17px,4.6vw,21px);line-height:1.32;margin-top:12px}
+
+  .note{margin-top:14px;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.5;border:1px solid var(--hairline);background:var(--surface);display:flex;gap:10px;align-items:flex-start}
+  .note .ico{flex:0 0 auto;width:18px;height:18px;margin-top:2px;color:var(--accent)}
+  .note.warn{border-color:color-mix(in srgb,var(--warm) 45%,var(--hairline))}
+  .note.warn .ico{color:var(--warm)}
+
+  /* a11y bar */
+  .a11y-bar{margin-top:16px}
+  .tts-toggle{
+    width:100%;display:flex;align-items:center;gap:10px;justify-content:center;
+    font-size:14.5px;font-weight:700;padding:13px 14px;border-radius:12px;cursor:pointer;
+    border:1px solid var(--accent);background:var(--accent);color:#fff;
+  }
+  .tts-toggle svg{width:18px;height:18px;flex:0 0 auto}
+  .tts-toggle[aria-pressed="false"]{background:transparent;color:var(--ink-soft);border-color:var(--hairline)}
+  .tts-toggle:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .a11y-hint{margin:8px 2px 0;font-size:12px;color:var(--ink-faint);line-height:1.5}
+
+  .vib-settings{margin-top:10px;border:1px solid var(--hairline);border-radius:12px;background:var(--surface);padding:0 14px}
+  .vib-settings summary{cursor:pointer;padding:12px 0;font-size:13.5px;font-weight:600;list-style:none}
+  .vib-settings summary::-webkit-details-marker{display:none}
+  .vib-settings summary::before{content:"▸  ";color:var(--ink-faint)}
+  .vib-settings[open] summary::before{content:"▾  "}
+  .vib-settings .vs-body{padding-bottom:14px}
+  .vib-settings p{font-size:12px;color:var(--ink-soft);margin:0 0 14px;line-height:1.5}
+  .vib-settings label{display:block;font-size:13px;font-weight:600;margin:0 0 4px;overflow:hidden}
+  .vib-settings output{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--accent-strong);float:right}
+  .vib-settings input[type=range]{width:100%;accent-color:var(--accent);margin:2px 0 14px}
+  .vib-settings input[type=range]:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;margin:14px 0 4px;background:var(--surface-2);padding:5px;border-radius:13px;border:1px solid var(--hairline)}
+  .tabs button{
+    flex:1;font-size:14px;font-weight:600;padding:10px 8px;border:0;border-radius:9px;cursor:pointer;
+    background:transparent;color:var(--ink-soft);
+  }
+  .tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+  .tabs button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:18px;padding:18px 16px;box-shadow:var(--shadow);margin-top:16px}
+  .card > h2{font-family:"IBM Plex Sans KR",sans-serif;font-weight:700;font-size:16px;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+  .card > h2 .num{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;color:var(--ink-faint);border:1px solid var(--hairline);border-radius:6px;padding:1px 6px}
+  .card .sub{color:var(--ink-soft);font-size:13px;margin-bottom:14px}
+
+  /* ===== demo ribbon ===== */
+  .demo-ribbon{
+    display:flex;gap:9px;align-items:flex-start;
+    background:color-mix(in srgb,var(--warm) 16%,var(--surface));
+    border:1px solid color-mix(in srgb,var(--warm) 45%,var(--hairline));
+    color:var(--ink);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.5;margin-top:16px;
+  }
+  .demo-ribbon svg{flex:0 0 auto;width:17px;height:17px;margin-top:1px;color:var(--warm)}
+
+  /* ===== account card ===== */
+  .acct-card{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;padding:18px 16px;box-shadow:var(--shadow);margin-top:14px}
+  .acct-bank{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .acct-no{font-family:"IBM Plex Mono",monospace;font-size:14px;margin:5px 0 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--ink)}
+  .acct-bal{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  #balDisp,#histBalDisp{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:30px;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+  #balDisp.masked,#histBalDisp.masked{letter-spacing:.14em;color:var(--ink-faint)}
+
+  .mini{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;border:1px solid var(--hairline);background:transparent;color:var(--accent-strong);cursor:pointer}
+  .mini:hover{border-color:var(--accent)}
+  .mini:disabled{opacity:.55;cursor:default}
+  .btn-listen{font-size:14px;font-weight:700;padding:10px 16px;border-radius:11px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer}
+  .btn-listen:disabled{opacity:.6;cursor:default}
+
+  .bank-actions{display:grid;gap:10px;margin-top:14px}
+  .big-action{
+    text-align:left;padding:15px 16px;border-radius:14px;border:1px solid var(--hairline);
+    background:var(--surface);color:var(--ink);cursor:pointer;display:grid;gap:3px;box-shadow:var(--shadow);
+  }
+  .big-action b{font-size:15.5px;font-weight:700}
+  .big-action span{font-size:12.5px;color:var(--ink-soft)}
+  .big-action:hover{border-color:var(--accent)}
+  .big-action:focus-visible,.btn-listen:focus-visible,.mini:focus-visible,.back:focus-visible,.next-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .reset-link{display:block;margin:16px auto 0;font-size:12px;color:var(--ink-faint);background:none;border:0;text-decoration:underline;cursor:pointer}
+
+  .back{background:none;border:0;color:var(--ink-soft);font-size:14px;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:6px}
+  .bview > h2,.step-head h2{font-family:"IBM Plex Sans KR",sans-serif;font-weight:700;font-size:19px;margin-bottom:12px}
+  .bview > h2:focus-visible,.step-head h2:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:3px}
+
+  /* step bar */
+  .step-head{display:flex;align-items:baseline;gap:10px}
+  .step-head #stepNum{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-faint)}
+  .step-bar{height:5px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin:2px 0 18px}
+  .step-bar i{display:block;height:100%;background:var(--accent);width:25%;transition:width .3s ease}
+
+  /* transaction list */
+  .hist-bal{font-size:13px;color:var(--ink-soft);display:flex;gap:8px;align-items:center;margin-bottom:12px}
+  .tx-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+  .tx{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 14px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface);width:100%;text-align:left;cursor:pointer;color:var(--ink)}
+  .tx:hover{border-color:var(--accent)}
+  .tx .tl{display:grid;gap:2px}
+  .tx .desc{font-size:14px;font-weight:600}
+  .tx .date{font-size:12px;color:var(--ink-faint);font-family:"IBM Plex Mono",monospace}
+  .tx .amt{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .tx .amt.pos{color:var(--pos)} .tx .amt.neg{color:var(--neg)}
+
+  /* recipients */
+  .recip-list{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+  .recip{width:100%;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface);cursor:pointer;color:var(--ink);display:grid;gap:2px}
+  .recip:hover{border-color:var(--accent)}
+  .recip b{font-size:15px}
+  .recip span{font-size:12px;color:var(--ink-soft);font-family:"IBM Plex Mono",monospace}
+
+  .fld-label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;font-family:"IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase}
+  .pin-echo{font-family:"IBM Plex Mono",monospace;font-size:20px;letter-spacing:.12em;padding:12px;border-radius:11px;background:var(--surface-2);border:1px solid var(--hairline);text-align:center;margin-bottom:12px;min-height:48px;word-break:break-all}
+
+  .amount-disp{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:40px;text-align:right;font-variant-numeric:tabular-nums;padding:8px 4px 4px;border-bottom:2px solid var(--hairline);margin-bottom:10px}
+  .amount-disp span{font-family:"IBM Plex Sans KR",sans-serif;font-size:18px;font-weight:600;color:var(--ink-soft);margin-left:6px}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 4px}
+  .chip{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid var(--hairline);background:transparent;color:var(--ink-soft);cursor:pointer;font-family:"IBM Plex Mono",monospace}
+  .chip:hover{border-color:var(--accent);color:var(--ink)}
+
+  .next-btn{width:100%;margin-top:16px;padding:15px;border-radius:13px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  .next-btn:disabled{opacity:.5;cursor:default}
+  .next-btn.danger{background:var(--danger);border-color:var(--danger)}
+
+  .confirm-dl{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;margin:4px 0 16px;font-size:14px}
+  .confirm-dl dt{color:var(--ink-faint);font-size:12.5px;font-family:"IBM Plex Mono",monospace;padding-top:2px}
+  .confirm-dl dd{margin:0;font-weight:600;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  #cfAmt{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:18px}
+  .confirm-check{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft);cursor:pointer;line-height:1.4}
+  .confirm-check input{width:20px;height:20px;flex:0 0 auto;accent-color:var(--accent);margin-top:1px}
+
+  .pin-note{font-size:12.5px;color:var(--ink-faint);text-align:center;margin:0 0 14px}
+  .pin-dots{display:flex;gap:14px;justify-content:center;margin-bottom:18px}
+  .pin-dots i{width:15px;height:15px;border-radius:50%;border:2px solid var(--dot-flat-ring)}
+  .pin-dots i.on{background:var(--accent);border-color:var(--accent)}
+
+  .done-mark{width:64px;height:64px;border-radius:50%;background:var(--pos);color:#fff;font-size:34px;display:grid;place-items:center;margin:6px auto 14px;font-weight:700}
+  .done-msg{text-align:center;font-size:15px;line-height:1.5;margin:0 0 14px}
+
+  /* ===== learn view (number reader) ===== */
+  .readout{display:flex;align-items:center;gap:16px;padding:15px;border-radius:14px;background:var(--surface-2);border:1px solid var(--hairline)}
+  .readout .big{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:58px;line-height:1;min-width:48px;text-align:center;font-variant-numeric:tabular-nums}
+  .readout .meta{font-size:13px;color:var(--ink-soft);line-height:1.5}
+  .readout .meta b{color:var(--ink);font-weight:600}
+  .readout .meta .uni{font-size:26px;line-height:1;color:var(--ink);letter-spacing:2px}
+
+  .dot:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .strip-wrap{margin-top:14px}
+  .strip-label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
+  .strip{display:flex;gap:14px;overflow-x:auto;padding:10px 2px 12px;scrollbar-width:thin}
+  .scell{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;border:1px solid transparent;transition:border-color .2s,background-color .2s}
+  .scell.current{border-color:var(--accent);background:var(--surface-2)}
+  .scell .grid{--d:15px;--gap:9px;display:grid;grid-template-columns:repeat(2,var(--d));grid-auto-rows:var(--d);gap:var(--gap)}
+  .scell .grid .d{width:var(--d);height:var(--d);border-radius:50%;border:1.5px solid var(--dot-flat-ring);background:transparent;transition:transform .16s,background-color .16s,box-shadow .16s,border-color .16s}
+  .scell .grid .d.raised{background:var(--dot-raised);border-color:var(--dot-raised)}
+  .scell .grid .d.is-active{transform:scale(1.22);box-shadow:0 0 0 4px var(--accent-glow);border-color:var(--accent)}
+  .scell .grid .d.raised.is-active{background:var(--accent)}
+  .scell .cap{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+  .scell.sign .cap{font-family:"IBM Plex Sans KR",sans-serif;font-weight:600;font-size:11px;color:var(--warm)}
+
+  /* touch-to-read pad */
+  .touch-wrap{margin-top:18px}
+  .touch-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+  .touch-title{font-size:14px;font-weight:600;color:var(--ink-soft)}
+  .touch-title b{font-family:"Bricolage Grotesque",sans-serif;font-size:19px;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tnav{width:46px;height:46px;border-radius:12px;border:1px solid var(--hairline);background:var(--surface-2);color:var(--ink);font-size:22px;line-height:1;cursor:pointer}
+  .tnav:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .touchpad{
+    --d:64px;--gap:30px;
+    display:grid;grid-template-columns:repeat(2,var(--d));grid-auto-rows:var(--d);gap:var(--gap);
+    justify-content:center;padding:26px;border-radius:16px;
+    background:var(--surface-2);border:1px solid var(--hairline);
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .touchpad .td{
+    width:var(--d);height:var(--d);border-radius:50%;border:2px solid var(--dot-flat-ring);
+    display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-faint);
+    pointer-events:none;transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease;
+  }
+  .touchpad .td.raised{background:radial-gradient(circle at 38% 34%,var(--dot-raised-hi),var(--dot-raised) 72%);border-color:var(--dot-raised);color:var(--surface)}
+  .touchpad .td.lit{box-shadow:0 0 0 7px var(--accent-glow);border-color:var(--accent);transform:scale(1.07)}
+  .touchpad .td.raised.lit{background:radial-gradient(circle at 38% 34%,var(--accent-strong),var(--accent) 72%)}
+  .touch-hint{margin:10px 2px 0;font-size:12.5px;color:var(--ink-faint);line-height:1.55}
+  @media (prefers-reduced-motion:reduce){ .touchpad .td.lit{transform:none} }
+
+  /* braille touch-strip (rub to read numbers in banking) */
+  .braille-reader{
+    margin-top:12px;padding:16px 14px;border-radius:14px;background:var(--surface-2);
+    border:1px solid var(--hairline);touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .br-cells{display:flex;flex-wrap:wrap;gap:16px 20px;justify-content:center}
+  .br-cell{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .br-cell .g{--d:22px;--gap:12px;display:grid;grid-template-columns:repeat(2,var(--d));grid-auto-rows:var(--d);gap:var(--gap)}
+  .br-cell .g .b{width:var(--d);height:var(--d);border-radius:50%;border:2px solid var(--dot-flat-ring);background:transparent;pointer-events:none;transition:transform .1s ease,box-shadow .1s ease,border-color .1s ease}
+  .br-cell .g .b.raised{background:var(--dot-raised);border-color:var(--dot-raised)}
+  .br-cell .g .b.lit{box-shadow:0 0 0 6px var(--accent-glow);border-color:var(--accent);transform:scale(1.14)}
+  .br-cell .g .b.raised.lit{background:var(--accent)}
+  .br-cell .cap{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-faint);font-weight:600}
+  .br-cell.sign .cap{color:var(--warm);font-family:"IBM Plex Sans KR",sans-serif;font-size:10px}
+  .br-hint{margin-top:12px;font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.5}
+  .br-cell{padding:5px;border-radius:9px;transition:background-color .15s,box-shadow .15s}
+  .br-cell.playing{background:var(--surface);box-shadow:0 0 0 2px var(--accent)}
+  .br-cell .g .b.play-lit{box-shadow:0 0 0 6px var(--accent-glow);border-color:var(--accent);transform:scale(1.16)}
+  .br-cell .g .b.raised.play-lit{background:var(--accent)}
+  @media (prefers-reduced-motion:reduce){ .br-cell .g .b.lit,.br-cell .g .b.play-lit{transform:none} }
+
+  /* a number offered in BOTH modes: ▶ play + ✋ rub */
+  .num-modes{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+  .num-modes .nm-play{align-self:flex-start;font-size:13px;padding:9px 14px}
+  .num-modes .nm-play[aria-pressed="true"]{border-color:var(--danger);color:var(--danger)}
+  .num-modes .braille-reader{margin-top:0}
+
+  /* one-handed braille input */
+  .in-mode{display:inline-flex;border:1px solid var(--hairline);border-radius:10px;overflow:hidden;margin:4px 0 12px}
+  .in-mode button{font:inherit;font-size:13px;padding:8px 14px;border:0;background:transparent;color:var(--ink-soft);cursor:pointer}
+  .in-mode button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .in-mode button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+  .bi{display:flex;flex-direction:column;gap:12px}
+  .bi-readout{text-align:center;font-size:13.5px;font-weight:600;padding:11px;border-radius:10px;background:var(--surface-2);border:1px solid var(--hairline);min-height:44px}
+  .bi-readout b{font-family:"Bricolage Grotesque",sans-serif;font-size:21px;font-variant-numeric:tabular-nums}
+  .bi-grid{
+    --d:64px;--gap:26px;align-self:center;
+    display:grid;grid-template-columns:repeat(2,var(--d));grid-auto-rows:var(--d);gap:var(--gap);
+    padding:22px;border-radius:16px;background:var(--surface-2);border:1px solid var(--hairline);
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  }
+  .bi-dot{
+    width:var(--d);height:var(--d);border-radius:50%;padding:0;cursor:pointer;
+    border:2px solid var(--dot-flat-ring);background:transparent;
+    display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-faint);
+    transition:transform .1s ease,background-color .12s,border-color .12s,box-shadow .1s;
+  }
+  .bi-dot.on{background:radial-gradient(circle at 38% 34%,var(--dot-raised-hi),var(--dot-raised) 72%);border-color:var(--dot-raised);color:var(--surface)}
+  .bi-dot.feel{box-shadow:0 0 0 6px var(--accent-glow);border-color:var(--accent);transform:scale(1.06)}
+  .bi-dot:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .bi-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .bi-actions button{font:inherit;font-size:13px;font-weight:600;padding:11px 15px;border-radius:11px;cursor:pointer;border:1px solid var(--hairline);background:var(--surface);color:var(--ink)}
+  .bi-actions .commit{background:var(--accent);border-color:var(--accent);color:#fff}
+  .bi-actions button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .bi-step{display:flex;gap:10px;align-items:center;justify-content:center;font-size:12.5px;color:var(--ink-soft)}
+  .bi-step button{width:42px;height:42px;border-radius:11px;border:1px solid var(--hairline);background:var(--surface);color:var(--ink);font-size:17px;cursor:pointer}
+  .bi-step button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .bi-hint{font-size:11.5px;color:var(--ink-faint);text-align:center;line-height:1.55}
+  @media (prefers-reduced-motion:reduce){ .bi-dot.feel{transform:none} }
+
+  /* fixed braille reading dock — always at the bottom edge so it is easy to find by touch */
+  .braille-dock{
+    position:fixed;left:0;right:0;bottom:0;z-index:55;
+    background:var(--surface);border-top:2px solid var(--accent);
+    box-shadow:0 -8px 28px rgba(0,0,0,.18);
+    padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));
+  }
+  .braille-dock .bd-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .bd-label{font-weight:700;font-size:13.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bd-play{flex:0 0 auto;height:36px;padding:0 14px;border-radius:9px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+  .bd-play[aria-pressed="true"]{background:var(--danger);border-color:var(--danger)}
+  .bd-close{flex:0 0 auto;width:36px;height:36px;border-radius:9px;border:1px solid var(--hairline);background:transparent;color:var(--ink-soft);font-size:14px;cursor:pointer}
+  .bd-body{display:flex;align-items:stretch;justify-content:center;gap:6px}
+  .bd-nav{flex:0 0 auto;width:30px;border:1px solid var(--hairline);border-radius:9px;background:var(--surface-2);color:var(--ink-soft);font-size:20px;line-height:1;cursor:pointer}
+  .bd-scroller{
+    flex:1;min-width:0;overflow-x:auto;overflow-y:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+    padding:8px 2px;border-radius:10px;background:var(--surface-2);
+    scrollbar-width:none;scroll-padding-left:2px;
+  }
+  .bd-scroller::-webkit-scrollbar{display:none}
+  .bd-scroller .br-cells{flex-wrap:nowrap;justify-content:flex-start;gap:0 14px}
+  .bd-scroller .br-cell{--d:18px;--gap:8px;flex:0 0 auto;padding:2px 2px;gap:3px}
+  .bd-scroller .br-cell .g{--d:18px;--gap:8px}
+  .bd-scroller .br-cell .cap{font-size:10.5px}
+  .bd-hint{margin-top:5px;font-size:10px;color:var(--ink-faint);text-align:center;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bd-actions{display:flex;gap:8px;margin-top:7px}
+  .bd-actions button{flex:1;padding:11px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;border:1px solid var(--hairline);background:var(--surface);color:var(--ink)}
+  .bd-actions #bdCommit{flex:2;background:var(--accent);border-color:var(--accent);color:#fff}
+  .bd-actions button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .braille-dock.stepping{border-top-color:var(--warm)}
+  .braille-dock.stepping .bd-body{align-items:center}
+  .braille-dock.stepping .bd-scroller{background:color-mix(in srgb,var(--warm) 10%,var(--surface-2));display:flex;align-items:center;justify-content:center;padding:6px 4px;overflow:visible}
+  .braille-dock.stepping .br-cells{justify-content:center;gap:0}
+  .braille-dock.stepping .br-cell{--d:24px;--gap:11px;padding:2px 6px;gap:3px}
+  .braille-dock.stepping .br-cell .g{--d:24px;--gap:11px}
+  .braille-dock.stepping .br-cell .cap{font-size:19px;font-weight:800;font-family:"Bricolage Grotesque",sans-serif}
+  .braille-dock.stepping .bd-nav{font-size:24px;width:42px}
+  .in-braille{display:block;width:100%;margin:10px 0 4px;padding:11px;font-size:13px}
+  .bd-play:focus-visible,.bd-close:focus-visible,.bd-nav:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .bd-scroller:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .bd-scroller:focus:not(:focus-visible){outline:none}
+  body.has-dock .stop-fab{display:none!important}
+
+  /* floating stop button shown during any vibration playback */
+  .stop-fab{
+    position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:60;
+    padding:14px 28px;border-radius:999px;border:1px solid var(--danger);
+    background:var(--danger);color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+    box-shadow:0 8px 28px rgba(0,0,0,.28);
+  }
+  .stop-fab:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .nm-open{align-self:flex-start}
+  @media (prefers-reduced-motion:no-preference){
+    .stop-fab{animation:fab-in .16s ease-out}
+    @keyframes fab-in{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%)}}
+  }
+
+  .field{display:flex;gap:8px;margin-top:6px}
+  .field input{flex:1;min-width:0;font:inherit;font-family:"IBM Plex Mono",monospace;font-size:20px;letter-spacing:.14em;text-align:center;padding:10px 12px;border-radius:11px;border:1px solid var(--hairline);background:var(--surface-2);color:var(--ink)}
+  .field input:focus-visible{outline:3px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+  .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .key{font:inherit;font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:22px;padding:16px 0;border-radius:12px;cursor:pointer;border:1px solid var(--hairline);background:var(--surface-2);color:var(--ink);font-variant-numeric:tabular-nums;transition:transform .06s,background-color .15s}
+  .key:active{transform:translateY(1px)}
+  .key.util{font-family:"IBM Plex Sans KR",sans-serif;font-size:15px;font-weight:600;color:var(--ink-soft)}
+  .key.play{background:var(--accent);border-color:var(--accent);color:#fff}
+  .key.play.on{background:var(--danger);border-color:var(--danger)}
+  .key:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .seg{display:inline-flex;border:1px solid var(--hairline);border-radius:10px;overflow:hidden}
+  .seg button{font:inherit;font-size:13px;padding:8px 12px;border:0;cursor:pointer;background:transparent;color:var(--ink-soft)}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+  .seg button:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+  .opt-label{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);width:100%;margin-top:6px}
+  .toggle{font:inherit;font-size:13px;padding:8px 12px;border-radius:10px;cursor:pointer;border:1px solid var(--hairline);background:transparent;color:var(--ink-soft);display:inline-flex;gap:7px;align-items:center}
+  .toggle[aria-pressed="true"]{border-color:var(--accent);color:var(--ink)}
+  .toggle .box{width:14px;height:14px;border-radius:4px;border:1.5px solid currentColor}
+  .toggle[aria-pressed="true"] .box{background:var(--accent);border-color:var(--accent)}
+  .toggle:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+  .legend{display:grid;gap:12px}
+  .lg{display:flex;gap:14px;align-items:center;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--hairline)}
+  .lg svg{flex:0 0 auto}
+  .lg .t{font-size:13.5px;line-height:1.5}
+  .lg .t b{font-weight:600}
+  .lg .t span{color:var(--ink-soft)}
+
+  .calib{padding:14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--hairline);margin-bottom:18px}
+  .calib p{margin:0 0 10px;font-size:13px;color:var(--ink-soft)}
+  .card-outline{height:calc(var(--px-per-mm) * 54px);width:calc(var(--px-per-mm) * 85.6px);max-width:100%;border:2px dashed var(--accent);border-radius:calc(var(--px-per-mm) * 3px);display:grid;place-items:center;margin:0 0 12px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-faint)}
+  .calib input[type=range]{width:100%;accent-color:var(--accent)}
+  .calib .val{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-soft);margin-top:6px}
+  .ruler{height:16px;margin:4px 0 4px;border-left:1px solid var(--ink);border-bottom:1px solid var(--ink);background-image:repeating-linear-gradient(90deg,var(--ink-faint) 0 1px,transparent 1px calc(var(--px-per-mm) * 1px));background-position:left bottom;background-repeat:repeat-x;background-size:100% 8px}
+  .ruler-note{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--ink-faint);margin-bottom:16px}
+  .specgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:14px}
+  .sp{display:flex;flex-direction:column;align-items:center;gap:9px}
+  .sp .real{--d:calc(var(--px-per-mm) * 1.5px);--pitch:calc(var(--px-per-mm) * 2.5px);display:grid;grid-template-columns:repeat(2,var(--d));grid-auto-rows:var(--d);column-gap:calc(var(--pitch) - var(--d));row-gap:calc(var(--pitch) - var(--d));padding:calc(var(--px-per-mm) * 1.8px);border:1px solid var(--hairline);border-radius:6px;background:var(--surface-2)}
+  .sp .real i{border-radius:50%;background:var(--dot-flat-ring);opacity:.28}
+  .sp .real i.on{background:var(--dot-raised);opacity:1}
+  .sp .lab{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+  table.dims{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+  table.dims th,table.dims td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--hairline)}
+  table.dims th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);font-weight:600}
+  table.dims td:last-child{font-family:"IBM Plex Mono",monospace;text-align:right;white-space:nowrap}
+
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .status{margin-top:14px;padding:10px 14px;border-radius:10px;font-size:13px;background:var(--surface-2);border:1px solid var(--hairline);color:var(--ink-soft);min-height:20px}
+  footer{margin-top:30px;font-size:12px;color:var(--ink-faint);line-height:1.7}
+  footer a{color:var(--ink-soft)}
+  footer h3{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+    .scell .grid .d.is-active{transform:none}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">진동 점자 · 은행 업무 체험</div>
+    <div class="brand"><span class="en">HAPTIC BRAILLE BANK</span></div>
+    <h1>숫자 점자를 진동으로 읽어, 계좌 잔액을 확인하고 거래 내역을 듣고 송금까지 해 보는 체험판입니다.</h1>
+    <p class="lead">볼록한 점은 길게 울리는 진동 한 번, 평평한 점은 짧게 툭 치는 진동 한 번. 점 하나하나를 따로 울려서 진동이 뒤로 갈수록 약해지지 않습니다. 금액·계좌번호의 모든 숫자를 이 규칙으로 읽어 줍니다. 아래 <b>숫자 학습</b> 탭에서 읽는 법을 먼저 익힐 수 있어요.</p>
+    <div id="support" class="note" hidden></div>
+  </header>
+
+  <div class="a11y-bar">
+    <button class="tts-toggle" id="ttsToggle" aria-pressed="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a9 9 0 0 1 0 14"/></svg>
+      <span id="ttsLabel">음성 안내 켜짐</span>
+    </button>
+    <p class="a11y-hint"><b>TalkBack·VoiceOver 같은 스크린리더는 꺼</b> 주세요. 이 앱의 음성 안내를 대신 사용합니다. 잔액·계좌번호·비밀번호 같은 정보는 소리로 읽지 않고 <b>진동과 점자로만</b> 안내합니다.</p>
+
+    <details class="vib-settings">
+      <summary>진동 길이 조절 (볼록 · 평평)</summary>
+      <div class="vs-body">
+        <p>웹에서는 진동 <b>세기</b>를 직접 바꿀 수 없어, 볼록·평평을 진동 <b>길이</b>로 구분합니다. 기기에 맞게 조절하세요. 두 값을 같게 하면 길이 구분 없이 소리·화면으로만 구분합니다.</p>
+        <label for="vsStrong">볼록한 점 진동 <output id="vsStrongV">170 ms</output></label>
+        <input type="range" id="vsStrong" min="40" max="320" step="5" value="170">
+        <label for="vsWeak">평평한 점 진동 <output id="vsWeakV">60 ms</output></label>
+        <input type="range" id="vsWeak" min="10" max="220" step="5" value="60">
+        <button class="mini" id="vsTest" aria-pressed="false">▶ 3‑6 으로 미리 듣기</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="화면 전환">
+    <button role="tab" id="tab-bank" aria-selected="true" aria-controls="panel-bank">은행 업무</button>
+    <button role="tab" id="tab-learn" aria-selected="false" aria-controls="panel-learn">숫자 학습</button>
+  </div>
+
+  <!-- ============================ BANK PANEL ============================ -->
+  <section id="panel-bank" role="tabpanel" aria-labelledby="tab-bank">
+    <div class="demo-ribbon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+      <div><b>체험판입니다.</b> 실제 은행·계좌와 무관한 가상 데이터이며, 실제로 돈이 이동하지 않습니다. 비밀번호도 저장하지 않습니다.</div>
+    </div>
+
+    <!-- HOME -->
+    <div class="bview" id="bv-home">
+      <h2 tabindex="-1" id="bh-home">내 계좌</h2>
+      <div class="acct-card">
+        <div class="acct-bank">점자은행 입출금통장</div>
+        <div class="acct-no"><span id="acctNoText">352-1104-2938-11</span>
+          <button class="mini" id="acctShow">계좌번호 확인</button></div>
+        <div class="num-modes" id="acctModes" hidden></div>
+        <div class="acct-bal">
+          <span id="balDisp" class="masked">••••••• 원</span>
+          <button class="btn-listen" id="balShow">잔액 확인</button>
+        </div>
+        <div class="num-modes" id="balModes" hidden></div>
+      </div>
+      <div class="bank-actions">
+        <button class="big-action" data-go="transfer"><b>송금하기</b><span>받는 분과 금액을 진동으로 확인하고 이체</span></button>
+        <button class="big-action" data-go="history"><b>거래 내역</b><span>최근 입출금 내역을 진동으로 확인</span></button>
+      </div>
+      <button class="reset-link" id="bankReset">체험 데이터 초기화</button>
+    </div>
+
+    <!-- HISTORY -->
+    <div class="bview" id="bv-history" hidden>
+      <button class="back" data-back="home">← 내 계좌</button>
+      <h2 tabindex="-1" id="bh-history">거래 내역</h2>
+      <div class="hist-bal">현재 잔액 <span id="histBalDisp" class="masked">•••••</span>
+        <button class="mini" id="histBalShow">확인</button></div>
+      <div class="num-modes" id="histBalModes" hidden></div>
+      <ul class="tx-list" id="txList"></ul>
+    </div>
+
+    <!-- TRANSFER -->
+    <div class="bview" id="bv-transfer" hidden>
+      <button class="back" data-back="home">← 송금 취소</button>
+      <div class="step-head"><span id="stepNum">1 / 4</span><h2 tabindex="-1" id="bh-transfer">받는 분</h2></div>
+      <div class="step-bar"><i id="stepFill"></i></div>
+
+      <div class="tstep" id="ts-who">
+        <ul class="recip-list" id="recipList"></ul>
+        <button class="big-action" id="recipManual"><b>계좌번호 직접 입력</b><span>숫자 키패드 또는 점자로 한 자리씩 입력</span></button>
+      </div>
+
+      <div class="tstep" id="ts-manual" hidden>
+        <label class="fld-label" for="acctEcho">받는 분 계좌번호 (점자은행)</label>
+        <div class="pin-echo" id="acctEcho">–</div>
+        <div class="num-modes" id="acctBraille2" hidden></div>
+        <button class="mini in-braille" id="acctBrailleIn">✋ 점자로 입력 (아래 고정 칸)</button>
+        <div id="acctKeypadMount"></div>
+        <button class="next-btn" id="acctNext">다음</button>
+      </div>
+
+      <div class="tstep" id="ts-amount" hidden>
+        <div class="amount-disp"><span id="amtNum">0</span><span>원</span></div>
+        <div class="num-modes" id="amtBraille" hidden></div>
+        <div class="chips" id="amtChips"></div>
+        <button class="mini in-braille" id="amtBrailleIn">✋ 점자로 입력 (아래 고정 칸)</button>
+        <div id="amtKeypadMount"></div>
+        <button class="next-btn" id="amtNext">다음</button>
+      </div>
+
+      <div class="tstep" id="ts-confirm" hidden>
+        <dl class="confirm-dl">
+          <dt>받는 분</dt><dd id="cfName">–</dd>
+          <dt>은행</dt><dd id="cfBank">–</dd>
+          <dt>계좌번호</dt><dd id="cfNo">–</dd>
+          <dt>보낼 금액</dt><dd id="cfAmt">–</dd>
+        </dl>
+        <span class="fld-label">보낼 금액</span>
+        <div class="num-modes" id="cfAmtBraille"></div>
+        <span class="fld-label" style="margin-top:12px">받는 분 계좌번호</span>
+        <div class="num-modes" id="cfNoBraille"></div>
+        <label class="confirm-check" style="margin-top:14px"><input type="checkbox" id="cfCheck"> 받는 분과 금액을 손끝으로 확인했습니다</label>
+        <button class="next-btn danger" id="cfSend" disabled>보내기</button>
+      </div>
+
+      <div class="tstep" id="ts-pin" hidden>
+        <p class="pin-note">체험용 화면입니다. 아무 숫자나 6자리를 누르세요.</p>
+        <div class="pin-dots" id="pinDots"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <button class="mini in-braille" id="pinBrailleIn">✋ 점자로 입력 (아래 고정 칸)</button>
+        <div id="pinKeypadMount"></div>
+      </div>
+
+      <div class="tstep" id="ts-done" hidden>
+        <div class="done-mark" aria-hidden="true">✓</div>
+        <p class="done-msg" id="doneMsg">–</p>
+        <span class="fld-label">남은 잔액</span>
+        <div class="num-modes" id="doneBalBraille"></div>
+        <button class="next-btn" id="doneHome">확인</button>
+      </div>
+    </div>
+
+    <div class="status" id="bankStatus" aria-hidden="true">계좌를 확인하거나 송금을 시작하세요.</div>
+  </section>
+
+  <!-- ============================ LEARN PANEL ============================ -->
+  <section id="panel-learn" role="tabpanel" aria-labelledby="tab-learn" hidden>
+    <section class="card" aria-labelledby="rd-h">
+      <h2 id="rd-h"><span class="num">01</span>숫자 읽기 연습</h2>
+      <p class="sub">숫자를 입력하고 <b>읽기</b>를 누르면 기기가 진동합니다. 점을 직접 눌러 하나씩 확인할 수도 있어요.</p>
+      <div class="readout">
+        <div class="big" id="bigChar" aria-hidden="true">3</div>
+        <div class="meta">
+          <div class="uni" id="bigUni" aria-hidden="true">⠉</div>
+          <div id="bigDesc"><b>숫자 3</b><br>볼록: 1·4번 점</div>
+        </div>
+      </div>
+      <div class="strip-wrap">
+        <div class="strip-label">점자 배열 <span id="orderHint">(읽는 순서 1‑2‑3‑4‑5‑6)</span></div>
+        <div class="strip" id="strip" role="list" aria-label="점자 셀 배열. 점을 누르면 진동합니다."></div>
+      </div>
+
+      <div class="touch-wrap">
+        <div class="touch-head">
+          <button class="tnav" id="tPrev" aria-label="이전 숫자">‹</button>
+          <div class="touch-title">손끝으로 읽기 &nbsp;·&nbsp; 숫자 <b id="tChar">3</b></div>
+          <button class="tnav" id="tNext" aria-label="다음 숫자">›</button>
+        </div>
+        <div class="touchpad" id="touchpad" role="application" aria-label="점자 셀. 손끝을 대고 문지르면 각 점이 진동합니다."></div>
+        <p class="touch-hint">화면에 손끝을 대고 천천히 문질러 보세요. 볼록한 점은 길게 진동하며 올라가는 소리, 평평한 점은 짧게 진동하며 낮은 소리가 납니다. 왼쪽 위부터 1·2·3번, 오른쪽이 4·5·6번입니다.</p>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <input id="input" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" aria-label="읽을 숫자" value="3">
+      </div>
+      <div class="chips" aria-label="예시">
+        <button class="chip" data-ex="0">0</button>
+        <button class="chip" data-ex="7">7</button>
+        <button class="chip" data-ex="2026">2026</button>
+        <button class="chip" data-ex="0123456789">0–9 전체</button>
+      </div>
+      <div class="keypad" aria-label="숫자 키패드">
+        <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+        <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+        <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+        <button class="key util" data-act="back" aria-label="지우기">⌫</button>
+        <button class="key" data-k="0">0</button>
+        <button class="key play" data-act="play" id="playBtn" aria-label="읽기">▶</button>
+      </div>
+      <div class="row" role="group" aria-label="속도">
+        <span class="opt-label">진동 속도</span>
+        <div class="seg" id="speedSeg">
+          <button data-v="slow">느리게</button><button data-v="normal" aria-pressed="true">보통</button><button data-v="fast">빠르게</button>
+        </div>
+      </div>
+      <div class="row" role="group" aria-label="읽는 순서">
+        <span class="opt-label">읽는 순서</span>
+        <div class="seg" id="orderSeg">
+          <button data-v="col" aria-pressed="true">세로 1‑2‑3‑4‑5‑6</button><button data-v="row">가로 1‑4‑2‑5‑3‑6</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="toggle" id="signT" aria-pressed="true"><span class="box"></span>수표(⠼) 먼저</button>
+        <button class="toggle" id="repeatT" aria-pressed="false"><span class="box"></span>반복</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite">숫자를 입력한 뒤 읽기를 누르세요.</div>
+    </section>
+
+    <section class="card" aria-labelledby="lg-h">
+      <h2 id="lg-h"><span class="num">02</span>진동 읽는 법</h2>
+      <p class="sub">점 하나가 진동 한 마디입니다. 6마디를 순서대로 느끼면 한 글자입니다.</p>
+      <div class="legend">
+        <div class="lg">
+          <svg width="46" height="34" viewBox="0 0 46 34" aria-hidden="true"><rect x="7" y="8" width="32" height="18" rx="3" fill="currentColor"/></svg>
+          <div class="t"><b>볼록한 점 (튀어나옴)</b><br><span>길게 울리는 진동 한 번 (약 0.2초)</span></div>
+        </div>
+        <div class="lg">
+          <svg width="46" height="34" viewBox="0 0 46 34" aria-hidden="true"><rect x="19" y="8" width="8" height="18" rx="3" fill="currentColor"/></svg>
+          <div class="t"><b>평평한 점 (없음)</b><br><span>짧게 툭 치는 진동 한 번 (약 0.05초)</span></div>
+        </div>
+        <div class="lg">
+          <svg width="46" height="34" viewBox="0 0 46 34" aria-hidden="true"><circle cx="14" cy="9" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="14" cy="25" r="3.4" fill="currentColor"/><circle cx="26" cy="9" r="3.4" fill="currentColor"/><circle cx="26" cy="17" r="3.4" fill="currentColor"/><circle cx="26" cy="25" r="3.4" fill="currentColor"/></svg>
+          <div class="t"><b>수표(數標) ⠼ 를 먼저</b><br><span>숫자의 시작을 알리는 신호(3·4·5·6번 점)</span></div>
+        </div>
+        <div class="lg">
+          <svg width="46" height="34" viewBox="0 0 46 34" aria-hidden="true"><rect x="4" y="14" width="6" height="6" rx="2" fill="currentColor"/><rect x="14" y="14" width="6" height="6" rx="2" fill="currentColor"/><line x1="24" y1="17" x2="34" y2="17" stroke="currentColor" stroke-width="2" stroke-dasharray="2 3"/><rect x="37" y="14" width="6" height="6" rx="2" fill="currentColor"/></svg>
+          <div class="t"><b>글자와 글자 사이</b><br><span>한 글자(점 6개)가 끝나면 긴 쉼이 옵니다. 쉼이 느껴지면 다음 숫자입니다.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="sp-h">
+      <h2 id="sp-h"><span class="num">03</span>점자 규격 도면 (1:1)</h2>
+      <p class="sub">아래 점들은 <b>한국 점자 규정</b>의 실제 치수로 그려집니다. 신용카드로 한 번 보정하면 정확해집니다.</p>
+      <div class="calib">
+        <p>실제 신용카드(가로 85.6&thinsp;mm)를 화면에 대고, 아래 점선 사각형과 <b>가로 폭</b>이 같아지도록 조절하세요.</p>
+        <div class="card-outline" id="cardOutline">85.6 mm</div>
+        <input type="range" id="calib" min="2.2" max="7.2" step="0.01" value="3.7795" aria-label="화면 배율 보정">
+        <div class="val" id="calibVal"></div>
+      </div>
+      <div class="ruler" id="ruler" aria-hidden="true"></div>
+      <div class="ruler-note">눈금 1&thinsp;mm</div>
+      <div class="specgrid" id="specGrid"></div>
+      <table class="dims">
+        <thead><tr><th>항목</th><th>규격</th></tr></thead>
+        <tbody>
+          <tr><td>점 지름</td><td>1.5–1.6 mm</td></tr>
+          <tr><td>점 높이(볼록)</td><td>0.6–0.9 mm</td></tr>
+          <tr><td>같은 칸 점간 거리</td><td>2.3–2.5 mm</td></tr>
+          <tr><td>글자 간 거리(자간)</td><td>5.5–6.9 mm</td></tr>
+          <tr><td>줄 간 거리(행간)</td><td>10.0 mm</td></tr>
+        </tbody>
+      </table>
+      <p class="sub" style="margin-top:12px;margin-bottom:0">화면은 평면이라 <b>점 높이</b>를 만질 수 없습니다. 이 서비스는 그 높이 차이를 <b>진동 길이</b>(위 설정에서 조절)와 소리·화면으로 바꿔 전달합니다.</p>
+    </section>
+  </section>
+
+  <footer>
+    <h3>안내</h3>
+    <p>은행 업무 화면은 <b>디자인·접근성 체험용 목업</b>입니다. 계좌·잔액·거래 내역·받는 분은 모두 가상이며, 실제 이체·조회는 이뤄지지 않습니다.</p>
+    <h3 style="margin-top:14px">점자 규격 출처</h3>
+    <p>문화체육관광부 <b>「한국 점자 규정」(2017 개정, 2020 고시)</b>, 국립국어원 <em>점자 규격 표준(안)</em>.<br>
+      · <a href="https://www.korean.go.kr" target="_blank" rel="noopener">국립국어원</a> · <a href="https://www.hankyung.com/article/202009104781Y" target="_blank" rel="noopener">규격 표준화 고시 보도</a></p>
+    <h3 style="margin-top:14px">진동 지원</h3>
+    <p id="footSupport">Vibration API는 Android Chrome·삼성 인터넷 등에서 동작하며 iOS Safari는 지원하지 않습니다. 미지원 기기에서는 소리와 화면으로 대체됩니다.</p>
+    <p>웹 표준 진동은 <b>세기 조절이 불가능</b>합니다. 그래서 <b>손끝으로 문지를 때</b>는 볼록·평평을 진동 길이(길게 vs 짧게)로 구분하고, <b>재생할 때</b>는 모든 점을 같은 길이로 울리는 대신 소리(올라가는 음 vs 낮은 음)와 화면 표시로 구분합니다. 점마다 따로 진동을 울려 모터가 뒤로 갈수록 약해지는 것을 막습니다. 진짜 '세기' 차이는 네이티브 앱(Android <code>VibrationEffect</code> 진폭, iOS Core Haptics)에서만 가능합니다.</p>
+  </footer>
+</div>
+
+<div id="brailleDock" class="braille-dock" hidden>
+  <div class="bd-head">
+    <span class="bd-label" id="bdLabel">점자</span>
+    <button class="bd-close" id="bdBack" type="button" hidden aria-label="마지막 자리 지우기">⌫</button>
+    <button class="bd-play" id="bdPlay" type="button" aria-pressed="false" aria-label="재생으로 듣기">▶ 재생</button>
+    <button class="bd-close" id="bdClose" type="button" aria-label="점자 칸 닫기">✕</button>
+  </div>
+  <div class="bd-body">
+    <button class="bd-nav" id="bdPrev" type="button" aria-label="이전">‹</button>
+    <div class="bd-scroller" id="bdStrip" tabindex="-1" role="application" aria-label="점자 칸. 손끝으로 문질러 읽으세요. 화면 맨 아래에 고정됩니다."></div>
+    <button class="bd-nav" id="bdNext" type="button" aria-label="다음">›</button>
+  </div>
+  <div class="bd-actions" id="bdActions" hidden>
+    <button id="bdCommit" type="button">이 숫자 입력</button>
+    <button id="bdErase" type="button">지우기</button>
+  </div>
+  <div class="bd-hint" id="bdHint">손끝으로 문질러 읽기 · ‹ › 로 이동</div>
+</div>
+
+<button id="stopFab" class="stop-fab" hidden aria-label="진동 재생 멈춤">■ 진동 멈춤</button>
+
+<div class="sr-only" id="live-polite" aria-live="polite"></div>
+<div class="sr-only" id="live-assertive" aria-live="assertive"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= braille data ================= */
+  var PATTERNS = {
+    "0":[2,4,5],"1":[1],"2":[1,2],"3":[1,4],"4":[1,4,5],
+    "5":[1,5],"6":[1,2,4],"7":[1,2,4,5],"8":[1,2,5],"9":[2,4]
+  };
+  var UNICODE = {"0":"⠚","1":"⠁","2":"⠃","3":"⠉","4":"⠙","5":"⠑","6":"⠋","7":"⠛","8":"⠓","9":"⠊"};
+  var NUMBER_SIGN = [3,4,5,6];
+  var ORDERS = { col:[1,2,3,4,5,6], row:[1,4,2,5,3,6] };
+  var SPEED = { slow:1.7, normal:1.0, fast:0.62 };
+  // Web vibration has no amplitude/intensity control — only duration. So raised vs flat is
+  // carried by vibration LENGTH (user-adjustable below) plus sound (rising vs low tone) and
+  // the on-screen highlight. Set the two lengths equal to fall back to sound + visual only.
+  // Each dot is its own vibrate() call so the motor doesn't throttle across a long number.
+  function dotMs(raised){ return raised ? state.dotStrong : state.dotWeak; }
+  var BUZZ = { tap:[13], step:[16], ok:[45,55,45], success:[30,45,30,45,30,45,230], cancel:[240], error:[110,70,110] };
+
+  var HAS_VIBE = (typeof navigator !== "undefined" && typeof navigator.vibrate === "function");
+  var RM = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  /* ================= helpers ================= */
+  var $ = function(id){ return document.getElementById(id); };
+  function el(tag, cls, txt){ var e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+
+  /* ---- built-in voice (Web Speech API) for users without a screen reader ---- */
+  var TTS = { on:false, voice:null, supported:("speechSynthesis" in window) };
+  function ttsPickVoice(){
+    if(!TTS.supported) return;
+    var vs = window.speechSynthesis.getVoices() || [];
+    TTS.voice = vs.filter(function(v){ return /^ko/i.test(v.lang); })[0]
+             || vs.filter(function(v){ return /korean/i.test(v.name); })[0] || null;
+  }
+  if(TTS.supported){
+    ttsPickVoice();
+    window.speechSynthesis.onvoiceschanged = ttsPickVoice;
+  }
+  function speak(text, interrupt){
+    if(!TTS.on || !TTS.supported || !text) return;
+    try{
+      if(interrupt) window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(String(text));
+      u.lang = "ko-KR"; u.rate = 1.0; u.pitch = 1.0;
+      if(TTS.voice) u.voice = TTS.voice;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  // live region = for real screen readers; speak() = for the built-in voice.
+  // optional 2nd arg gives a shorter phrase to speak when the SR text is verbose.
+  function say(t, spoken){ var e=$("live-polite"); e.textContent=""; setTimeout(function(){ e.textContent=t; }, 30); speak(spoken!==undefined?spoken:t, false); }
+  function sayNow(t, spoken){ var e=$("live-assertive"); e.textContent=""; setTimeout(function(){ e.textContent=t; }, 30); speak(spoken!==undefined?spoken:t, true); }
+  function digitDots(ch){ return PATTERNS[ch] || []; }
+  function fmtWon(n){ return Number(n).toLocaleString("ko-KR") + "원"; }
+  function wonKo(n){
+    n = Math.round(Number(n));
+    if(n===0) return "0원";
+    var units=["","만","억","조"], parts=[], i=0;
+    while(n>0){ var c=n%10000; if(c) parts.unshift(c.toLocaleString("ko-KR")+units[i]); n=Math.floor(n/10000); i++; }
+    return parts.join(" ")+"원";
+  }
+  function todayKo(){ var d=new Date(); return (d.getMonth()+1)+"월 "+d.getDate()+"일"; }
+  var ORD=["","첫째","둘째","셋째","넷째","다섯째","여섯째","일곱째","여덟째","아홉째","열째","열한째","열두째","열셋째","열넷째","열다섯째","열여섯째"];
+  function ordinal(n){ return ORD[n] || (n+"번째"); }
+
+  /* ================= state ================= */
+  var state = {
+    speed:"normal", order:"col", numberSign:true, repeat:false,
+    tts:true, playing:false, pxPerMm:3.7795,
+    dotStrong:170, dotWeak:60   // vibration length (ms) for raised / flat dots
+  };
+  try{
+    var s=JSON.parse(localStorage.getItem("hb-braille")||"{}");
+    ["speed","order","numberSign","repeat","tts","pxPerMm","dotStrong","dotWeak"].forEach(function(k){ if(s[k]!==undefined) state[k]=s[k]; });
+    if(typeof s.input==="string" && /^[0-9]+$/.test(s.input)) learnQueue = s.input.split("");
+  }catch(e){}
+  var learnQueue = (typeof learnQueue!=="undefined") ? learnQueue : ["3"];
+
+  function persist(){
+    try{
+      localStorage.setItem("hb-braille", JSON.stringify({
+        speed:state.speed,order:state.order,numberSign:state.numberSign,repeat:state.repeat,
+        tts:state.tts,pxPerMm:state.pxPerMm,dotStrong:state.dotStrong,dotWeak:state.dotWeak,
+        input:learnQueue.join("")
+      }));
+    }catch(e){}
+  }
+
+  /* ================= audio ================= */
+  var AC=null, audioNodes=[];
+  function getAC(){
+    try{ if(!AC) AC=new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended") AC.resume(); }
+    catch(e){ AC=null; }
+    return AC;
+  }
+  function ensureAudio(){ getAC(); }
+  // the one sound cue for a dot — rising tone = raised (볼록), low flat tone = flat (평평).
+  // used both while rubbing (when === null → play now) and during playback (when = scheduled time).
+  function tick(raised, when){
+    var ac=getAC(); if(!ac) return;
+    var t=(when!=null?when:ac.currentTime)+0.004;
+    var o=ac.createOscillator(), g=ac.createGain();
+    o.type="sine";
+    if(raised){ o.frequency.setValueAtTime(392,t); o.frequency.exponentialRampToValueAtTime(587,t+0.10); }
+    else { o.frequency.setValueAtTime(180,t); }
+    var dur=raised?0.14:0.05, vol=raised?0.16:0.10;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+dur+0.03);
+    audioNodes.push(o);
+  }
+  function stopAudioNodes(){ audioNodes.forEach(function(o){ try{o.stop(0)}catch(e){} }); audioNodes=[]; }
+
+  function buzz(k){ if(HAS_VIBE){ try{ navigator.vibrate(BUZZ[k]||[15]); }catch(e){} } }
+
+  /* ================= haptic timeline engine ================= */
+  var timers=[];
+  function clearTimers(){ timers.forEach(clearTimeout); timers=[]; }
+  function setStopFab(on){ var f=document.getElementById("stopFab"); if(f) f.hidden=!on; }
+  function stopAll(){
+    clearTimers();
+    if(HAS_VIBE){ try{ navigator.vibrate(0); }catch(e){} }
+    stopAudioNodes();
+    setStopFab(false);
+  }
+  // stop EVERYTHING that's playing and reset every play control (button labels, FAB, highlight)
+  function stopPlayback(){
+    stopAll();
+    if(typeof state!=="undefined" && state.playing) learnStop();
+    endNumPlayUI();
+  }
+
+  // tokens: array of {d:"5"} | {sign:true} | {brk:true}
+  function buildTimeline(tokens){
+    var order=ORDERS[state.order], sf=SPEED[state.speed];
+    // each dot buzzes for dotMs(raised); dots within a letter sit close,
+    // a long silent gap separates one letter from the next
+    var DOT_GAP=Math.round(190*sf), CELL_GAP=Math.round(950*sf), BRK_GAP=Math.round(650*sf);
+    var cells=[];
+    tokens.forEach(function(tk){
+      if(tk.brk){ if(cells.length) cells[cells.length-1].gapAfter+=BRK_GAP; return; }
+      if(tk.sign){ cells.push({kind:"sign",dots:NUMBER_SIGN,gapAfter:0}); return; }
+      cells.push({kind:"digit",ch:tk.d,dots:digitDots(tk.d),gapAfter:0});
+    });
+    var events=[], t=0;
+    cells.forEach(function(cell,ci){
+      events.push({t:t,type:"cell",ci:ci,cell:cell});
+      order.forEach(function(pos,pi){
+        var raised=cell.dots.indexOf(pos)!==-1;
+        events.push({t:t,type:"dot",ci:ci,pos:pos,raised:raised});
+        t+=dotMs(raised);
+        if(pi<order.length-1){ t+=DOT_GAP; }
+      });
+      if(ci<cells.length-1){ t+=CELL_GAP+cell.gapAfter; }
+    });
+    return {events:events,duration:t,cells:cells};
+  }
+
+  function runTimeline(tl, cbs){
+    cbs=cbs||{};
+    stopAll();
+    setStopFab(true);
+    var ac=getAC();
+    if(ac){
+      var base=ac.currentTime+0.03;
+      tl.events.forEach(function(ev){
+        if(ev.type==="dot") tick(ev.raised, base+ev.t/1000);   // rising = raised, low = flat
+      });
+    }
+    // Fire each dot as its own equal-length vibrate() call (spaced by the timeline) instead
+    // of one long pattern — this stops the phone motor from throttling partway through.
+    tl.events.forEach(function(ev){
+      timers.push(setTimeout(function(){
+        if(ev.type==="dot"){
+          if(HAS_VIBE){ try{ navigator.vibrate(dotMs(ev.raised)); }catch(e){} }
+          if(cbs.onDot) cbs.onDot(ev,tl);
+        } else if(ev.type==="cell" && cbs.onCell){ cbs.onCell(ev,tl); }
+      }, ev.t));
+    });
+    timers.push(setTimeout(function(){ setStopFab(false); if(cbs.onDone) cbs.onDone(); }, tl.duration+80));
+  }
+
+  function tokensFromNumber(raw, opts){
+    opts=opts||{};
+    var tokens=[];
+    if(opts.sign!==false) tokens.push({sign:true});
+    var groups=String(raw).split(/[^0-9]+/).filter(Boolean);
+    if(opts.group && groups.length===1){
+      var d=groups[0];
+      for(var i=0;i<d.length;i++){
+        tokens.push({d:d.charAt(i)});
+        var fromRight=d.length-1-i;
+        if(fromRight>0 && fromRight%3===0) tokens.push({brk:true});
+      }
+    } else {
+      groups.forEach(function(g,gi){
+        g.split("").forEach(function(c){ tokens.push({d:c}); });
+        if(gi<groups.length-1) tokens.push({brk:true});
+      });
+    }
+    return tokens;
+  }
+
+  /* ---- sequential playback of a number, with visual highlight + a stop control ---- */
+  var numPlayBtn=null, numPlayHl=null;
+  function brMarkCell(mount, ci){
+    if(!mount) return;
+    Array.prototype.forEach.call(mount.querySelectorAll(".br-cell"), function(c){
+      var on=(+c.dataset.uid)===ci;
+      c.classList.toggle("playing", on);
+      if(on && c.scrollIntoView) c.scrollIntoView({inline:"center", block:"nearest", behavior:RM?"auto":"smooth"});
+    });
+  }
+  function brFlashDot(mount, ci, pos, raised){
+    if(!mount) return;
+    var cell=mount.querySelector('.br-cell[data-uid="'+ci+'"]'); if(!cell) return;
+    var d=cell.querySelector('.b[data-pos="'+pos+'"]'); if(!d) return;
+    d.classList.add("play-lit");
+    setTimeout(function(){ d.classList.remove("play-lit"); }, 300);
+  }
+  function brClearPlay(mount){
+    if(!mount) return;
+    Array.prototype.forEach.call(mount.querySelectorAll(".playing"), function(c){ c.classList.remove("playing"); });
+    Array.prototype.forEach.call(mount.querySelectorAll(".play-lit"), function(d){ d.classList.remove("play-lit"); });
+  }
+  function endNumPlayUI(){
+    if(numPlayBtn){
+      numPlayBtn.dataset.playing="";
+      numPlayBtn.textContent = numPlayBtn.dataset.t0 || numPlayBtn.textContent;
+      numPlayBtn.setAttribute("aria-pressed","false");
+      numPlayBtn.disabled=false;
+    }
+    brClearPlay(numPlayHl);
+    numPlayBtn=null; numPlayHl=null;
+  }
+  function startNumberPlay(btn, raw, opts, hlEl){
+    stopPlayback();
+    numPlayBtn=btn||null; numPlayHl=hlEl||null;
+    if(btn){
+      btn.dataset.t0 = btn.dataset.t0 || btn.textContent;
+      btn.dataset.playing="1";
+      btn.textContent="■ 멈춤";
+      btn.setAttribute("aria-pressed","true");
+    }
+    var tl=buildTimeline(tokensFromNumber(raw,opts||{}));
+    runTimeline(tl, {
+      onCell: hlEl ? function(ev){ brMarkCell(hlEl, ev.ci); } : null,
+      onDot:  hlEl ? function(ev){ brFlashDot(hlEl, ev.ci, ev.pos, ev.raised); } : null,
+      onDone: function(){ endNumPlayUI(); }
+    });
+  }
+  // transfer-step "순서로 듣기" buttons: toggle play/stop, with optional synced highlight strip
+  function vibeNumber(raw, opts, btn, hlEl){
+    if(btn && btn.dataset.playing==="1"){ stopPlayback(); return; }
+    startNumberPlay(btn, String(raw), opts||{}, hlEl||null);
+  }
+
+  /* ---- braille touch-strip: rub a finger across the cells to read a number ---- */
+  function brClearLit(mount){
+    Array.prototype.forEach.call(mount.querySelectorAll(".b.lit"), function(b){ b.classList.remove("lit"); });
+  }
+  function brHit(mount, x, y){
+    var cells=mount.querySelectorAll(".br-cell"), found=null, fcell=null;
+    for(var i=0;i<cells.length && !found;i++){
+      var dots=cells[i].querySelectorAll(".b");
+      for(var j=0;j<dots.length;j++){
+        var r=dots[j].getBoundingClientRect();
+        var cx=r.left+r.width/2, cy=r.top+r.height/2, rad=r.width/2+8;
+        if((x-cx)*(x-cx)+(y-cy)*(y-cy) <= rad*rad){ found=dots[j]; fcell=cells[i]; break; }
+      }
+    }
+    if(!found){ if(mount._last){ mount._last=null; brClearLit(mount); } return; }
+    var ro=mount._readerOpts||{};
+    if(ro.onCellEnter && fcell.dataset.uid!==mount._lastCellUid){
+      mount._lastCellUid=fcell.dataset.uid; ro.onCellEnter(fcell);
+    }
+    var pos=+found.dataset.pos, key=fcell.dataset.uid+":"+pos;
+    if(key===mount._last) return;
+    mount._last=key;
+    brClearLit(mount); found.classList.add("lit");
+    var raised=found.classList.contains("raised");
+    if(HAS_VIBE){ try{ navigator.vibrate(dotMs(raised)); }catch(e){} }
+    tick(raised);   // effect sound instead of speaking "볼록/평평" — keeps the reading flow
+  }
+  function brailleReader(mount, raw, opts){
+    opts=opts||{};
+    var digits=String(raw).replace(/\D/g,"");
+    mount.innerHTML="";
+    var cells=el("div","br-cells");
+    var list=[];
+    if(opts.sign!==false) list.push({sign:true, dots:NUMBER_SIGN, cap:"수표"});
+    digits.split("").forEach(function(c){ list.push({ch:c, dots:digitDots(c), cap:c}); });
+    list.forEach(function(cell,idx){
+      var cd=el("div","br-cell"+(cell.sign?" sign":""));
+      cd.dataset.uid = idx;
+      cd.dataset.sign = cell.sign ? "1" : "0";
+      cd.dataset.name = cell.sign ? "수표" : cell.ch;
+      var g=el("div","g"), nodes={};
+      [1,2,3,4,5,6].forEach(function(p){
+        var b=el("div","b"+(cell.dots.indexOf(p)!==-1?" raised":""));
+        b.dataset.pos=p; nodes[p]=b;
+      });
+      [1,4,2,5,3,6].forEach(function(p){ g.appendChild(nodes[p]); });
+      cd.appendChild(g);
+      if(!opts.noCap) cd.appendChild(el("div","cap",cell.cap));
+      cells.appendChild(cd);
+    });
+    mount.appendChild(cells);
+    if(!opts.noHint) mount.appendChild(el("div","br-hint","손끝으로 좌우로 문질러 읽기 · 볼록=긴 진동·높은음, 평평=짧은 진동·낮은음"));
+    mount.setAttribute("role","img");
+    mount.setAttribute("aria-label", (opts.label||"점자")+" "+list.length+"칸. 손끝으로 문질러 읽으세요.");
+    mount._readerOpts=opts;
+    mount._last=null; mount._active=false; mount._lastCellUid=null;
+    if(!mount._wired){
+      mount._wired=true;
+      mount.addEventListener("pointerdown",function(e){
+        stopPlayback();                    // stop any sequential playback so it doesn't fight the rub
+        mount._active=true; mount._last=null; mount._lastCellUid=null;
+        mount._dnT=Date.now(); mount._dnX=e.clientX; mount._dnY=e.clientY; mount._mv=false;
+        try{ mount.setPointerCapture(e.pointerId); }catch(_){}
+        brHit(mount, e.clientX, e.clientY); e.preventDefault();
+      });
+      mount.addEventListener("pointermove",function(e){
+        if(!mount._active) return;
+        if(Math.abs(e.clientX-mount._dnX)+Math.abs(e.clientY-mount._dnY)>10) mount._mv=true;
+        brHit(mount, e.clientX, e.clientY); e.preventDefault();
+      });
+      var end=function(e){
+        var tap = mount._active && !mount._mv && (Date.now()-mount._dnT < 400);
+        mount._active=false; mount._last=null; mount._lastCellUid=null; brClearLit(mount);
+        var ro=mount._readerOpts||{};
+        if(tap && ro.onCellTap && e){
+          var cell=brCellAt(mount, e.clientX, e.clientY);
+          if(cell) ro.onCellTap(cell);
+        }
+      };
+      mount.addEventListener("pointerup",end);
+      mount.addEventListener("pointercancel",function(){ mount._active=false; mount._last=null; mount._lastCellUid=null; brClearLit(mount); });
+    }
+  }
+  function brCellAt(mount,x,y){
+    var cells=mount.querySelectorAll(".br-cell");
+    for(var i=0;i<cells.length;i++){
+      var r=cells[i].getBoundingClientRect();
+      if(x>=r.left-6 && x<=r.right+6 && y>=r.top-6 && y<=r.bottom+6) return cells[i];
+    }
+    return null;
+  }
+
+  /* ---- fixed braille dock: one surface at the bottom of the screen, for READING or INPUT ---- */
+  var dockRaw=null, dockOpts=null, dockMode="read";
+  var dockPick=null, dockPickBack=null, dockStepN=0;
+  function sizeDock(){
+    var d=$("brailleDock");
+    if(d && !d.hidden){ document.body.style.paddingBottom = (d.offsetHeight + 8) + "px"; }
+  }
+  function dockShow(){
+    var d=$("brailleDock"); d.hidden=false;
+    document.body.classList.add("has-dock");
+    requestAnimationFrame(sizeDock);
+    $("bdStrip").focus();
+  }
+  // READ mode: fixed non-overlapping pages. The strip is capped to EXACTLY dockPageSize cells
+  // wide so a partial next cell never peeks in — it appears whole on the next page.
+  var dockPage=0, dockPageSize=6;
+  function dockCells(){ return $("bdStrip").querySelectorAll(".br-cell"); }
+  function dockCellX(cell){ var c0=dockCells()[0]; return cell.offsetLeft - (c0?c0.offsetLeft:0); }
+  function dockPerPage(){ return dockPageSize; }
+  function dockTotalPages(){ return Math.max(1, Math.ceil(dockCells().length/dockPageSize)); }
+  function dockAddSpacer(){
+    var cellsEl=$("bdStrip").querySelector(".br-cells"); if(!cellsEl) return;
+    var old=cellsEl.querySelector(".br-spacer"); if(old) old.parentNode.removeChild(old);
+    var sp=document.createElement("div"); sp.className="br-spacer"; sp.setAttribute("aria-hidden","true");
+    sp.style.cssText="flex:0 0 auto;width:"+Math.max(60, $("bdStrip").clientWidth||300)+"px";
+    cellsEl.appendChild(sp);
+  }
+  function dockMeasure(){
+    var strip=$("bdStrip");
+    strip.style.maxWidth="";                         // release cap → natural (flex:1) width
+    dockAddSpacer();
+    var cells=dockCells();
+    if(cells.length<2){ dockPageSize=Math.max(1,cells.length); return; }
+    var stride=cells[1].offsetLeft-cells[0].offsetLeft;
+    if(stride<=0){ dockPageSize=cells.length; return; }
+    dockPageSize=Math.max(1, Math.floor(strip.clientWidth/stride));
+    if(cells.length>dockPageSize){
+      var li=dockPageSize-1;
+      var w=(cells[li].offsetLeft+cells[li].offsetWidth) - cells[0].offsetLeft + 6;  // exactly N cells + scroller padding
+      strip.style.maxWidth=w+"px";
+    }
+  }
+  function dockUpdateNav(){
+    var tp=dockTotalPages();
+    $("bdPrev").hidden = (tp<=1 || dockPage<=0);      // no ‹ on the first page
+    $("bdNext").hidden = (tp<=1 || dockPage>=tp-1);   // no › on the last page
+    sizeDock();
+  }
+  function dockGoToPage(p, dir){
+    var strip=$("bdStrip"), cells=dockCells();
+    if(!cells.length) return;
+    var tp=dockTotalPages();
+    var np=Math.max(0, Math.min(p, tp-1));
+    if(np===dockPage && dir){ sayNow(dir<0 ? "첫 화면입니다" : "마지막 화면입니다"); dockUpdateNav(); return; }
+    dockPage=np;
+    var start=np*dockPageSize, end=Math.min(start+dockPageSize, cells.length);
+    strip.scrollLeft = dockCellX(cells[start]);
+    dockUpdateNav();
+    if(HAS_VIBE){ try{ navigator.vibrate(10); }catch(e){} }
+    // sensitive: announce position only, never the digit values
+    sayNow((np+1)+" / "+tp+" 화면. "+(start+1)+"번째부터 "+end+"번째 칸을 보여 줍니다. 손끝으로 문질러 읽으세요.");
+  }
+  function dockPageGo(dir){ dockGoToPage(dockPage + dir, dir); }
+  function loadDock(raw, opts){
+    opts=opts||{};
+    stopPlayback();
+    dockMode="read"; dockPick=null; dockPickBack=null; dockPage=0; dockSilent=false;
+    dockRaw=String(raw).replace(/\D/g,""); dockOpts=opts;
+    $("brailleDock").classList.remove("stepping");
+    $("bdPlay").hidden=false; $("bdBack").hidden=true; $("bdActions").hidden=true;
+    $("bdLabel").textContent = opts.label || "점자";
+    $("bdHint").textContent = "손끝으로 문질러 읽기 · ‹ › 로 화면 넘기기";
+    brailleReader($("bdStrip"), dockRaw, { label: opts.label, noHint:true, sign:false });
+    $("bdStrip").style.maxWidth=""; $("bdStrip").scrollLeft = 0;
+    dockShow();
+    requestAnimationFrame(function(){ dockMeasure(); dockPage=0; $("bdStrip").scrollLeft=0; dockUpdateNav(); });
+    // sensitive: never speak the value — only a non-revealing guide
+    sayNow((opts.label||"점자")+"을 아래 점자 칸에 표시했습니다. 손끝으로 문질러 읽으세요.");
+  }
+  // INPUT mode: step through 0–9 in one big cell, commit the one you want.
+  // Digits are NEVER spoken (bystander privacy) — the user reads the braille by touch;
+  // dockSilent additionally hides the on-screen number (used for the PIN).
+  var dockSilent=false;
+  function openDockPicker(onPick, onBack, opts){
+    opts=opts||{};
+    stopPlayback();
+    dockMode="step"; dockPick=onPick; dockPickBack=onBack||null;
+    dockSilent=!!opts.silent;
+    dockStepN=0; dockRaw=null; dockOpts=null;
+    $("brailleDock").classList.add("stepping");
+    $("bdStrip").style.maxWidth="";
+    $("bdPlay").hidden=true; $("bdBack").hidden=true; $("bdActions").hidden=false;
+    $("bdPrev").hidden=false; $("bdNext").hidden=false;
+    $("bdLabel").textContent = opts.label || "숫자 입력";
+    $("bdHint").textContent = "‹ › 로 숫자 바꾸기 · 점자를 손끝으로 확인 · ‘이 숫자 입력’";
+    renderStepCell();
+    dockShow();
+    sayNow((opts.label||"숫자 입력")+". 왼쪽 오른쪽 화살표로 숫자를 바꾸고 점자를 손끝으로 확인한 뒤 ‘이 숫자 입력’. 잘못 넣었으면 ‘지우기’. 보안을 위해 숫자는 소리로 읽지 않습니다.");
+  }
+  function renderStepCell(){
+    // aria-label stays non-revealing (focus-speak must not leak the digit);
+    // the on-screen number caption shows unless dockSilent (the PIN)
+    brailleReader($("bdStrip"), String(dockStepN), {
+      sign:false, noHint:true, noCap:dockSilent,
+      label:"점자 한 칸. 손끝으로 확인",
+      cellLabel:function(){ return "점자 한 칸. 손끝으로 확인"; }
+    });
+  }
+  function dockStep(delta){
+    dockStepN = (dockStepN + delta + 10) % 10;
+    renderStepCell();
+    if(HAS_VIBE){ try{ navigator.vibrate(10); }catch(e){} }  // light detent
+    tick(false);                                             // low soft blip — no spoken digit
+  }
+  function dockCommit(){
+    if(!dockPick) return;
+    buzz("ok");
+    // the digit handler (amtDigit / acctDigit / pinDigit) announces the position ("둘째 자리 입력") itself;
+    // the stepper stays on the digit just entered so repeating it is one more tap
+    dockPick(String(dockStepN));
+  }
+  function dockErase(){
+    if(dockPickBack){ buzz("tap"); dockPickBack(); }
+  }
+  function closeDock(){
+    stopPlayback();
+    var d=$("brailleDock");
+    d.hidden=true; d.classList.remove("stepping");
+    $("bdStrip").style.maxWidth="";
+    $("bdPlay").hidden=false; $("bdBack").hidden=true; $("bdActions").hidden=true;
+    $("bdPrev").hidden=false; $("bdNext").hidden=false;
+    document.body.classList.remove("has-dock");
+    document.body.style.paddingBottom="";
+    dockRaw=null; dockOpts=null; dockMode="read";
+    dockPick=null; dockPickBack=null;
+  }
+
+  // a number entry-point: one button that loads the number into the fixed bottom dock
+  function mountNumberModes(box, raw, opts){
+    opts=opts||{};
+    box.innerHTML="";
+    var b=el("button","mini nm-open","✋ 점자로 읽기");
+    b.type="button";
+    b.setAttribute("aria-label",(opts.label?opts.label+" ":"")+"점자로 읽기 — 화면 맨 아래 고정 칸에 표시됩니다");
+    b.addEventListener("click",function(){ loadDock(raw, opts); });
+    box.appendChild(b);
+    box.hidden=false;
+  }
+  function clearNumberModes(box){ if(box){ box.hidden=true; box.innerHTML=""; } }
+
+  /* ================= support notice ================= */
+  (function(){
+    var e=$("support");
+    if(HAS_VIBE){
+      e.className="note";
+      e.innerHTML='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><div>이 기기는 <b>진동</b>을 지원합니다.</div>';
+    } else {
+      e.className="note warn";
+      e.innerHTML='<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><div>이 브라우저는 진동을 지원하지 않습니다(iOS Safari 등). <b>소리</b>와 화면으로 대체됩니다.</div>';
+    }
+    e.hidden=false;
+  })();
+
+  /* ================= reusable keypad ================= */
+  function makeKeypad(mount, onDigit, onBack){
+    var k=el("div","keypad");
+    // bank keypads: data-quiet stops the app's built-in voice from reading the key you land on,
+    // so a bystander can't hear the amount / account / PIN you're typing
+    for(var i=1;i<=9;i++){ (function(n){
+      var b=el("button","key",String(n)); b.type="button"; b.setAttribute("aria-label","숫자 "+n); b.dataset.quiet="1";
+      b.addEventListener("click",function(){ buzz("tap"); onDigit(String(n)); });
+      k.appendChild(b);
+    })(i); }
+    var back=el("button","key util","⌫"); back.type="button"; back.setAttribute("aria-label","지우기"); back.dataset.quiet="1";
+    back.addEventListener("click",function(){ buzz("tap"); onBack(); });
+    var zero=el("button","key","0"); zero.type="button"; zero.setAttribute("aria-label","숫자 0"); zero.dataset.quiet="1";
+    zero.addEventListener("click",function(){ buzz("tap"); onDigit("0"); });
+    var pad=el("button","key util",""); pad.type="button"; pad.disabled=true; pad.style.visibility="hidden";
+    k.appendChild(back); k.appendChild(zero); k.appendChild(pad);
+    mount.innerHTML=""; mount.appendChild(k);
+  }
+
+  /* ============================================================
+     BANK MODULE
+     ============================================================ */
+  var BANK_DEFAULT = {
+    balance: 1284500,
+    tx: [
+      { d:"9월 1일",  desc:"급여 입금",  amt: 2450000 },
+      { d:"8월 30일", desc:"한빛마트",   amt: -32400 },
+      { d:"8월 28일", desc:"월세 이체",  amt: -550000 },
+      { d:"8월 25일", desc:"예금 이자",  amt: 137 }
+    ]
+  };
+  var RECIPIENTS = [
+    { name:"김민수", bank:"점자은행", number:"352-2201-5567-03" },
+    { name:"이서연", bank:"새벽은행", number:"271-04-882931" },
+    { name:"엄마",   bank:"점자은행", number:"352-9931-0088-21" }
+  ];
+  var MY_ACCT = "352-1104-2938-11";
+
+  var bank = { balance:0, tx:[] };
+  function bankLoad(){
+    try{
+      var s=JSON.parse(localStorage.getItem("hb-bank")||"null");
+      if(s && typeof s.balance==="number" && Array.isArray(s.tx)){ bank.balance=s.balance; bank.tx=s.tx; return; }
+    }catch(e){}
+    bank.balance=BANK_DEFAULT.balance; bank.tx=BANK_DEFAULT.tx.slice();
+  }
+  function bankSave(){ try{ localStorage.setItem("hb-bank", JSON.stringify(bank)); }catch(e){} }
+
+  var tr = { recipient:null, amount:0, acct:"", pin:"" };
+  var bankStatus=$("bankStatus");
+  function bStatus(t){ bankStatus.textContent=t; }
+
+  function showBankView(name){
+    stopPlayback(); closeDock();
+    ["home","history","transfer"].forEach(function(v){ $("bv-"+v).hidden = (v!==name); });
+    var h=$("bh-"+name); if(h){ h.focus(); }
+    if(name==="home"){ maskBalance(); bStatus("계좌를 확인하거나 송금을 시작하세요."); }
+  }
+
+  /* ---- balance ---- */
+  function maskBalance(){
+    $("balDisp").textContent="••••••• 원"; $("balDisp").classList.add("masked");
+    $("histBalDisp").textContent="•••••"; $("histBalDisp").classList.add("masked");
+    clearNumberModes($("balModes")); clearNumberModes($("acctModes")); clearNumberModes($("histBalModes"));
+  }
+  function revealBalance(){
+    $("balDisp").textContent=fmtWon(bank.balance); $("balDisp").classList.remove("masked");
+    $("histBalDisp").textContent=fmtWon(bank.balance); $("histBalDisp").classList.remove("masked");
+  }
+  $("balShow").addEventListener("click",function(){
+    revealBalance();
+    sayNow("잔액을 아래 점자 칸에 표시했습니다. 손끝으로 읽으세요.");
+    bStatus("잔액을 점자 칸에 표시했습니다.");
+    mountNumberModes($("balModes"), bank.balance, {label:"잔액", group:true});
+  });
+  $("acctShow").addEventListener("click",function(){
+    sayNow("계좌번호를 아래 점자 칸에 표시했습니다. 손끝으로 읽으세요.");
+    bStatus("계좌번호를 점자 칸에 표시했습니다.");
+    mountNumberModes($("acctModes"), MY_ACCT.replace(/\D/g,""), {label:"내 계좌번호", group:false});
+  });
+  $("histBalShow").addEventListener("click",function(){
+    revealBalance();
+    sayNow("잔액을 아래 점자 칸에 표시했습니다. 손끝으로 읽으세요.");
+    mountNumberModes($("histBalModes"), bank.balance, {label:"현재 잔액", group:true});
+  });
+
+  /* ---- navigation ---- */
+  document.querySelectorAll('#bv-home [data-go]').forEach(function(b){
+    b.addEventListener("click",function(){
+      var go=b.dataset.go;
+      if(go==="transfer"){ resetTransfer(); showBankView("transfer"); goStep("who"); }
+      else { renderHistory(); showBankView("history"); }
+    });
+  });
+  document.querySelectorAll('#panel-bank [data-back]').forEach(function(b){
+    b.addEventListener("click",function(){ showBankView(b.dataset.back); });
+  });
+  $("bankReset").addEventListener("click",function(){
+    if(!window.confirm("체험 데이터를 처음 상태로 되돌릴까요?")) return;
+    bank.balance=BANK_DEFAULT.balance; bank.tx=BANK_DEFAULT.tx.slice(); bankSave();
+    maskBalance(); say("체험 데이터를 초기화했습니다."); bStatus("초기화되었습니다.");
+  });
+
+  /* ---- history ---- */
+  function renderHistory(){
+    revealBalance();
+    var ul=$("txList"); ul.innerHTML="";
+    bank.tx.forEach(function(x){
+      var li=el("li");
+      var btn=el("button","tx"); btn.type="button";
+      var sign = x.amt>=0 ? "입금" : "출금";
+      btn.setAttribute("aria-expanded","false");
+      btn.setAttribute("aria-label", x.d+", "+x.desc+", "+sign+". 눌러서 금액을 점자 칸에 표시");
+      var tl=el("div","tl");
+      tl.appendChild(el("div","desc",x.desc));
+      tl.appendChild(el("div","date",x.d));
+      var amt=el("div","amt "+(x.amt>=0?"pos":"neg"), (x.amt>=0?"+":"−")+fmtWon(Math.abs(x.amt)));
+      btn.appendChild(tl); btn.appendChild(amt);
+      var modes=el("div","num-modes"); modes.hidden=true;
+      btn.addEventListener("click",function(){
+        if(modes.hidden){
+          sayNow(x.desc+" "+sign+" 금액을 아래 점자 칸에 표시했습니다.");
+          bStatus(x.desc+" 금액을 점자 칸에 표시했습니다.");
+          mountNumberModes(modes, Math.abs(x.amt), { label:(x.amt>=0?"입금액":"출금액"), group:true });
+          btn.setAttribute("aria-expanded","true");
+        } else {
+          clearNumberModes(modes); btn.setAttribute("aria-expanded","false");
+        }
+      });
+      li.appendChild(btn); li.appendChild(modes); ul.appendChild(li);
+    });
+  }
+
+  /* ---- transfer flow ---- */
+  var STEPS = { who:1, amount:2, confirm:3, pin:4 };
+  function resetTransfer(){
+    tr={ recipient:null, amount:0, acct:"", pin:"" };
+    $("acctEcho").textContent="–";
+    $("amtNum").textContent="0";
+    $("cfCheck").checked=false; $("cfSend").disabled=true;
+    ["amtBraille","acctBraille2"].forEach(function(id){ var e=$(id); e.hidden=true; e.innerHTML=""; });
+    ["cfAmtBraille","cfNoBraille","doneBalBraille"].forEach(function(id){ $(id).innerHTML=""; });
+    renderPinDots();
+  }
+  function goStep(step){
+    closeDock();
+    ["who","manual","amount","confirm","pin","done"].forEach(function(s){ $("ts-"+s).hidden = (s!==step); });
+    var idx = STEPS[step] || (step==="manual"?1:(step==="done"?4:1));
+    $("stepNum").textContent = idx+" / 4";
+    $("stepFill").style.width = (idx*25)+"%";
+    var titles={ who:"받는 분", manual:"받는 분 계좌번호", amount:"보낼 금액", confirm:"내용 확인", pin:"간편비밀번호", done:"완료" };
+    $("bh-transfer").textContent = titles[step];
+    $("bh-transfer").focus();
+    sayNow(idx+"단계 중 "+ (step==="done"?4:idx) +"단계, "+titles[step]);
+  }
+
+  // step 1: recipients
+  (function(){
+    var ul=$("recipList");
+    RECIPIENTS.forEach(function(r){
+      var li=el("li");
+      var b=el("button","recip"); b.type="button";
+      b.setAttribute("aria-label","받는 분 "+r.name+", "+r.bank+", 계좌번호 "+r.number.replace(/-/g," "));
+      b.appendChild(el("b",null,r.name));
+      b.appendChild(el("span",null,r.bank+" · "+r.number));
+      b.addEventListener("click",function(){
+        buzz("step"); tr.recipient={ name:r.name, bank:r.bank, number:r.number };
+        goStep("amount"); renderAmount();
+      });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  })();
+  function refreshAcctBraille(){
+    if(tr.acct.length){ mountNumberModes($("acctBraille2"), tr.acct, {label:"입력한 계좌번호", group:false}); }
+    else clearNumberModes($("acctBraille2"));
+  }
+  function acctDigit(d){
+    if(tr.acct.length>=16) return;
+    tr.acct+=d; $("acctEcho").textContent=tr.acct; refreshAcctBraille();
+    sayNow(ordinal(tr.acct.length)+" 자리 입력");
+  }
+  function acctBack(){
+    if(!tr.acct.length){ sayNow("입력된 자리가 없습니다"); return; }
+    tr.acct=tr.acct.slice(0,-1); $("acctEcho").textContent=tr.acct||"–"; refreshAcctBraille();
+    sayNow(tr.acct.length ? ordinal(tr.acct.length+1)+" 자리 지움" : "모두 지웠습니다");
+  }
+  $("recipManual").addEventListener("click",function(){
+    buzz("step"); tr.acct="";
+    $("acctEcho").textContent="–"; $("acctBraille2").hidden=true;
+    goStep("manual");
+    makeKeypad($("acctKeypadMount"), acctDigit, acctBack);
+  });
+  $("acctBrailleIn").addEventListener("click",function(){
+    openDockPicker(acctDigit, acctBack, { label:"계좌번호 점자 입력" });
+  });
+  $("acctNext").addEventListener("click",function(){
+    if(tr.acct.length<6){ sayNow("계좌번호를 정확히 입력하세요."); bStatus("계좌번호가 너무 짧습니다."); return; }
+    tr.recipient={ name:"직접 입력한 계좌", bank:"점자은행", number:tr.acct };
+    goStep("amount"); renderAmount();
+  });
+
+  // step 2: amount
+  var AMT_CHIPS=[[10000,"1만"],[50000,"5만"],[100000,"10만"],[500000,"50만"]];
+  function renderAmount(){
+    var wrap=$("amtChips"); wrap.innerHTML="";
+    AMT_CHIPS.forEach(function(c){
+      var b=el("button","chip",c[1]); b.type="button";
+      b.setAttribute("aria-label","빠른 금액"); b.dataset.quiet="1";
+      b.addEventListener("click",function(){ tr.amount=c[0]; updateAmount(); sayNow("금액을 넣었습니다"); });
+      wrap.appendChild(b);
+    });
+    makeKeypad($("amtKeypadMount"), amtDigit, amtBack);
+    updateAmount();
+  }
+  function amtDigit(d){
+    var next=(String(tr.amount||"")+d).replace(/^0+/,"");
+    if(next.length>9) return;
+    tr.amount=parseInt(next||"0",10); updateAmount();
+    sayNow(ordinal(Math.max(1,next.length))+" 자리 입력");
+  }
+  function amtBack(){
+    var s=String(tr.amount||"");
+    if(!s.length || s==="0"){ sayNow("입력된 자리가 없습니다"); return; }
+    s=s.slice(0,-1); tr.amount=parseInt(s||"0",10); updateAmount();
+    sayNow(s.length ? ordinal(s.length+1)+" 자리 지움" : "모두 지웠습니다");
+  }
+  $("amtBrailleIn").addEventListener("click",function(){
+    openDockPicker(amtDigit, amtBack, { label:"금액 점자 입력" });
+  });
+  function updateAmount(){
+    $("amtNum").textContent = Number(tr.amount||0).toLocaleString("ko-KR");
+    if(tr.amount>0){ mountNumberModes($("amtBraille"), tr.amount, {label:"입력한 금액", group:true}); }
+    else clearNumberModes($("amtBraille"));
+  }
+  $("amtNext").addEventListener("click",function(){
+    if(!tr.amount || tr.amount<1){ sayNow("금액을 입력하세요."); bStatus("금액이 비어 있습니다."); return; }
+    if(tr.amount>bank.balance){ sayNow("잔액이 부족합니다."); bStatus("잔액이 부족합니다."); buzz("error"); return; }
+    goStep("confirm"); renderConfirm();
+  });
+
+  // step 3: confirm
+  function renderConfirm(){
+    $("cfName").textContent = tr.recipient.name;
+    $("cfBank").textContent = tr.recipient.bank;
+    $("cfNo").textContent = tr.recipient.number;
+    $("cfAmt").textContent = fmtWon(tr.amount);
+    $("cfCheck").checked=false; $("cfSend").disabled=true;
+    mountNumberModes($("cfAmtBraille"), tr.amount, {label:"보낼 금액", group:true});
+    mountNumberModes($("cfNoBraille"), tr.recipient.number, {label:"받는 분 계좌번호", group:false});
+    sayNow("송금 내용을 확인하세요. 금액과 계좌번호를 아래 버튼으로 점자 칸에 띄워 손끝으로 확인하고, 맞으면 체크한 뒤 보내기를 누르세요.");
+  }
+  $("cfCheck").addEventListener("change",function(){ $("cfSend").disabled = !this.checked; });
+  function pinDigit(d){
+    if(tr.pin.length>=6) return;
+    tr.pin+=d; renderPinDots();
+    if(tr.pin.length===6){ sayNow("여섯째 자리까지 입력 완료. 송금합니다."); setTimeout(completeTransfer, 500); }
+    else sayNow(ordinal(tr.pin.length)+" 자리 입력");
+  }
+  function pinBack(){
+    if(!tr.pin.length){ sayNow("입력된 자리가 없습니다"); return; }
+    tr.pin=tr.pin.slice(0,-1); renderPinDots();
+    sayNow(tr.pin.length ? ordinal(tr.pin.length+1)+" 자리 지움" : "모두 지웠습니다");
+  }
+  $("cfSend").addEventListener("click",function(){
+    if(!$("cfCheck").checked) return;
+    tr.pin=""; renderPinDots(); goStep("pin");
+    makeKeypad($("pinKeypadMount"), pinDigit, pinBack);
+  });
+  $("pinBrailleIn").addEventListener("click",function(){
+    openDockPicker(pinDigit, pinBack, { label:"비밀번호 점자 입력", silent:true });
+  });
+
+  // step 4: pin
+  function renderPinDots(){
+    var wrap=$("pinDots"); wrap.innerHTML="";
+    for(var i=0;i<6;i++){ var d=el("i"); if(i<tr.pin.length) d.className="on"; wrap.appendChild(d); }
+    wrap.setAttribute("aria-label","비밀번호 "+tr.pin.length+"자리 입력됨");
+  }
+
+  // step 5: done
+  function completeTransfer(){
+    bank.balance -= tr.amount;
+    bank.tx.unshift({ d:todayKo(), desc:"송금 "+tr.recipient.name, amt:-tr.amount });
+    bankSave();
+    var msg = tr.recipient.name+"님께 "+fmtWon(tr.amount)+"을 보냈습니다. 남은 잔액 "+fmtWon(bank.balance)+".";
+    $("doneMsg").textContent = msg;   // shown on screen only
+    mountNumberModes($("doneBalBraille"), bank.balance, {label:"남은 잔액", group:true});
+    goStep("done");
+    buzz("success");
+    sayNow("송금이 완료되었습니다. 남은 잔액은 아래 버튼으로 점자 칸에서 확인하세요.");
+    bStatus("송금이 완료되었습니다.");
+  }
+  $("doneHome").addEventListener("click",function(){ resetTransfer(); showBankView("home"); });
+
+  /* ============================================================
+     LEARN MODULE
+     ============================================================ */
+  var input=$("input"), strip=$("strip"), playBtn=$("playBtn");
+  var bigChar=$("bigChar"), bigUni=$("bigUni"), bigDesc=$("bigDesc");
+  var statusEl=$("status"), orderHint=$("orderHint");
+  function setStatus(t){ statusEl.textContent=t; }
+
+  function dotSentence(ch){
+    var raised=digitDots(ch).slice().sort(function(a,b){return a-b;});
+    var flat=[1,2,3,4,5,6].filter(function(p){ return raised.indexOf(p)===-1; });
+    return "볼록 "+(raised.join("·")||"없음")+"번 점, 평평 "+flat.join("·")+"번 점";
+  }
+  function setBig(c,u,html){ bigChar.textContent=c; bigUni.textContent=u; bigDesc.innerHTML=html; }
+  function describeBig(ch){
+    var raised=digitDots(ch).slice().sort(function(a,b){return a-b;});
+    setBig(ch, UNICODE[ch], "<b>숫자 "+ch+"</b><br>볼록: "+(raised.join("·")||"없음")+"번 점");
+  }
+
+  function learnCells(){
+    var cells=[];
+    if(state.numberSign) cells.push({kind:"sign",dots:NUMBER_SIGN});
+    learnQueue.forEach(function(c){ cells.push({kind:"digit",ch:c,dots:digitDots(c)}); });
+    return cells;
+  }
+  function renderStrip(){
+    var cells=learnCells(); strip.innerHTML="";
+    cells.forEach(function(cell,ci){
+      var wrap=el("div","scell"+(cell.kind==="sign"?" sign":"")); wrap.setAttribute("role","listitem");
+      var grid=el("div","grid");
+      var nodes={};
+      [1,2,3,4,5,6].forEach(function(pos){
+        var raised=cell.dots.indexOf(pos)!==-1, d;
+        if(cell.kind==="digit"){
+          d=el("button","d"+(raised?" raised":"")); d.type="button";
+          d.setAttribute("aria-label",pos+"번 점, "+(raised?"볼록":"평평")+" — 눌러서 진동 확인");
+          d.addEventListener("click",function(){ probeDot(ci,pos,raised,cell.ch); });
+        } else { d=el("div","d"+(raised?" raised":"")); }
+        d.dataset.pos=pos; nodes[pos]=d;
+      });
+      [1,4,2,5,3,6].forEach(function(p){ grid.appendChild(nodes[p]); });
+      wrap.appendChild(grid);
+      wrap.appendChild(el("div","cap", cell.kind==="sign"?"수표":cell.ch));
+      strip.appendChild(wrap);
+    });
+  }
+  function scellAt(ci){ return strip.children[ci]; }
+  function highlightCell(ci){
+    Array.prototype.forEach.call(strip.children,function(c,i){ c.classList.toggle("current",i===ci); });
+    var c=scellAt(ci); if(c && c.scrollIntoView) c.scrollIntoView({inline:"center",block:"nearest",behavior:RM?"auto":"smooth"});
+  }
+  function flashDot(ci,pos,raised){
+    var c=scellAt(ci); if(!c) return;
+    var d=c.querySelector('.d[data-pos="'+pos+'"]'); if(!d) return;
+    d.classList.add("is-active");
+    setTimeout(function(){ d.classList.remove("is-active"); }, raised?260:150);
+  }
+  function clearActive(){
+    Array.prototype.forEach.call(strip.querySelectorAll(".is-active"),function(d){ d.classList.remove("is-active"); });
+    Array.prototype.forEach.call(strip.children,function(c){ c.classList.remove("current"); });
+  }
+  function renderPlayBtn(){
+    playBtn.textContent = state.playing ? "■" : "▶";
+    playBtn.setAttribute("aria-label", state.playing ? "정지" : "읽기");
+    playBtn.classList.toggle("on", state.playing);
+  }
+
+  function learnPlay(){
+    var chars=learnQueue.slice();
+    if(!chars.length){ setStatus("먼저 숫자를 입력하세요."); return; }
+    var tokens=[]; if(state.numberSign) tokens.push({sign:true});
+    chars.forEach(function(c){ tokens.push({d:c}); });
+    var tl=buildTimeline(tokens);
+    state.playing=true; renderPlayBtn();
+    runTimeline(tl,{
+      onCell:function(ev){
+        highlightCell(ev.ci);
+        if(ev.cell.kind==="sign"){ setBig("⠼","⠼","<b>수 표시</b><br>다음은 숫자입니다"); sayNow("수 표시","수 표시"); }
+        else { describeBig(ev.cell.ch); sayNow("숫자 "+ev.cell.ch+". "+dotSentence(ev.cell.ch), ev.cell.ch); }
+      },
+      onDot:function(ev){ flashDot(ev.ci,ev.pos,ev.raised); },
+      onDone:function(){
+        if(state.repeat && state.playing){ learnPlay(); }
+        else { state.playing=false; renderPlayBtn(); clearActive(); setStatus("다 읽었습니다."); }
+      }
+    });
+    setStatus("읽는 중…");
+  }
+  function learnStop(){
+    stopAll(); state.playing=false; renderPlayBtn(); clearActive(); setStatus("정지했습니다.");
+  }
+
+  function probeDot(ci,pos,raised,ch){
+    stopPlayback();
+    if(HAS_VIBE){ try{ navigator.vibrate(dotMs(raised)); }catch(e){} }
+    tick(raised);
+    flashDot(ci,pos,raised);
+    var msg=pos+"번 점은 "+(raised?"볼록입니다. 길게 울리는 진동.":"평평합니다. 짧게 치는 진동.");
+    setStatus("숫자 "+ch+" · "+msg); sayNow(msg);
+  }
+
+  /* ---- touch-to-read pad (rub a finger over the braille cell) ---- */
+  var TP_FILL=[1,4,2,5,3,6];   // fill order for a 2-column grid = dots 1/2/3 left, 4/5/6 right
+  var tpIdx=0, tpLastPos=null;
+  function tpDigit(){ return learnQueue[tpIdx] || learnQueue[0] || "0"; }
+  function renderTouchpad(){
+    if(tpIdx>=learnQueue.length) tpIdx=0;
+    var pad=$("touchpad"); if(!pad) return;
+    var ch=tpDigit(), raised=digitDots(ch);
+    $("tChar").textContent=ch;
+    pad.innerHTML="";
+    TP_FILL.forEach(function(pos){
+      var d=el("div","td"+(raised.indexOf(pos)!==-1?" raised":""));
+      d.dataset.pos=pos; d.textContent=pos; pad.appendChild(d);
+    });
+    pad.setAttribute("role","img");
+    pad.setAttribute("aria-label","숫자 "+ch+" 점자 칸. 손끝을 대고 문지르면 각 점이 진동합니다.");
+  }
+  function clearTpLit(){ Array.prototype.forEach.call($("touchpad").querySelectorAll(".lit"),function(d){ d.classList.remove("lit"); }); }
+  function tpHit(x,y){
+    var pad=$("touchpad"), kids=pad.children, found=null;
+    for(var i=0;i<kids.length;i++){
+      var r=kids[i].getBoundingClientRect();
+      var cx=r.left+r.width/2, cy=r.top+r.height/2, rad=r.width/2+9;
+      if((x-cx)*(x-cx)+(y-cy)*(y-cy) <= rad*rad){ found=kids[i]; break; }
+    }
+    if(!found){ if(tpLastPos!==null){ tpLastPos=null; clearTpLit(); } return; }
+    var pos=+found.dataset.pos;
+    if(pos===tpLastPos) return;
+    tpLastPos=pos;
+    clearTpLit(); found.classList.add("lit");
+    var raised=found.classList.contains("raised");
+    if(HAS_VIBE){ try{ navigator.vibrate(dotMs(raised)); }catch(e){} }
+    tick(raised);   // effect sound instead of speaking "볼록/평평"
+  }
+  (function(){
+    var pad=$("touchpad"); if(!pad) return;
+    var active=false;
+    pad.addEventListener("pointerdown",function(e){
+      if(state.playing) learnStop();
+      stopAll();
+      active=true; tpLastPos=null;
+      try{ pad.setPointerCapture(e.pointerId); }catch(_){}
+      tpHit(e.clientX,e.clientY); e.preventDefault();
+    });
+    pad.addEventListener("pointermove",function(e){
+      if(!active) return;
+      tpHit(e.clientX,e.clientY); e.preventDefault();
+    });
+    function end(){ active=false; tpLastPos=null; clearTpLit(); }
+    pad.addEventListener("pointerup",end);
+    pad.addEventListener("pointercancel",end);
+  })();
+  $("tPrev").addEventListener("click",function(){
+    if(learnQueue.length<2) return;
+    tpIdx=(tpIdx-1+learnQueue.length)%learnQueue.length; tpLastPos=null; renderTouchpad(); sayNow("숫자 "+tpDigit());
+  });
+  $("tNext").addEventListener("click",function(){
+    if(learnQueue.length<2) return;
+    tpIdx=(tpIdx+1)%learnQueue.length; tpLastPos=null; renderTouchpad(); sayNow("숫자 "+tpDigit());
+  });
+
+  function setQueue(str){
+    var clean=(str||"").replace(/[^0-9]/g,"").slice(0,12);
+    learnQueue=clean.split("");
+    if(input.value!==clean) input.value=clean;
+    persist(); renderStrip(); renderTouchpad();
+    if(learnQueue.length) describeBig(learnQueue[0]); else setBig("–","","<b>숫자를 입력하세요</b>");
+    if(state.playing) learnStop();
+  }
+
+  input.addEventListener("input",function(){ setQueue(input.value); });
+  document.querySelectorAll("#panel-learn .chip").forEach(function(b){
+    b.addEventListener("click",function(){ setQueue(b.dataset.ex); input.focus(); });
+  });
+  document.querySelectorAll("#panel-learn .keypad .key").forEach(function(b){
+    b.addEventListener("click",function(){
+      var k=b.dataset.k, act=b.dataset.act;
+      if(k!=null){ buzz("tap"); setQueue(input.value+k); say(k); }
+      else if(act==="back"){ buzz("tap"); setQueue(input.value.slice(0,-1)); say("지움"); }
+      else if(act==="play"){ state.playing ? learnStop() : learnPlay(); }
+    });
+  });
+
+  function wireSeg(seg,key,after){
+    seg.querySelectorAll("button").forEach(function(b){
+      b.addEventListener("click",function(){
+        seg.querySelectorAll("button").forEach(function(x){ x.setAttribute("aria-pressed","false"); });
+        b.setAttribute("aria-pressed","true"); state[key]=b.dataset.v; persist(); if(after) after();
+      });
+    });
+  }
+  wireSeg($("speedSeg"),"speed");
+  wireSeg($("orderSeg"),"order",function(){
+    orderHint.textContent = state.order==="col" ? "(읽는 순서 1‑2‑3‑4‑5‑6)" : "(읽는 순서 1‑4‑2‑5‑3‑6)";
+  });
+  function wireToggle(e,key,after){
+    e.addEventListener("click",function(){
+      state[key]=!state[key]; e.setAttribute("aria-pressed",String(state[key])); persist(); if(after) after();
+    });
+  }
+  wireToggle($("signT"),"numberSign",renderStrip);
+  wireToggle($("repeatT"),"repeat");
+
+  /* ---- vibration length settings ---- */
+  (function(){
+    var s=$("vsStrong"), w=$("vsWeak"), sv=$("vsStrongV"), wv=$("vsWeakV"), test=$("vsTest");
+    function paint(){ sv.textContent=state.dotStrong+" ms"; wv.textContent=state.dotWeak+" ms"; s.value=state.dotStrong; w.value=state.dotWeak; }
+    s.addEventListener("input",function(){ state.dotStrong=parseInt(s.value,10)||120; sv.textContent=state.dotStrong+" ms"; persist(); if(HAS_VIBE){try{navigator.vibrate(state.dotStrong)}catch(e){}} });
+    w.addEventListener("input",function(){ state.dotWeak=parseInt(w.value,10)||40; wv.textContent=state.dotWeak+" ms"; persist(); if(HAS_VIBE){try{navigator.vibrate(state.dotWeak)}catch(e){}} });
+    test.addEventListener("click",function(){
+      if(test.dataset.playing==="1"){ stopPlayback(); return; }
+      startNumberPlay(test, "36", {}, null);
+    });
+    paint();
+  })();
+
+  /* ---- calibration + spec grid ---- */
+  var calib=$("calib"), calibVal=$("calibVal");
+  function applyScale(){
+    document.documentElement.style.setProperty("--px-per-mm", state.pxPerMm.toFixed(4));
+    calibVal.textContent="1 mm ≈ "+state.pxPerMm.toFixed(2)+" px · 점 지름 "+(state.pxPerMm*1.5).toFixed(1)+" px";
+  }
+  calib.value=state.pxPerMm;
+  calib.addEventListener("input",function(){ state.pxPerMm=parseFloat(calib.value); applyScale(); persist(); });
+  applyScale();
+  (function(){
+    var g=$("specGrid");
+    for(var n=0;n<=9;n++){
+      var ch=String(n), raised=PATTERNS[ch];
+      var sp=el("div","sp"); sp.setAttribute("role","img");
+      sp.setAttribute("aria-label","숫자 "+ch+" 점자, "+dotSentence(ch));
+      var real=el("div","real"); real.setAttribute("aria-hidden","true");
+      [1,4,2,5,3,6].forEach(function(pos){ var i=el("i"); if(raised.indexOf(pos)!==-1) i.className="on"; real.appendChild(i); });
+      sp.appendChild(real); sp.appendChild(el("div","lab",ch)); g.appendChild(sp);
+    }
+  })();
+
+  /* ============================================================
+     TABS
+     ============================================================ */
+  var tabBank=$("tab-bank"), tabLearn=$("tab-learn");
+  function selectTab(which){
+    var bankSel = which==="bank";
+    tabBank.setAttribute("aria-selected",String(bankSel));
+    tabLearn.setAttribute("aria-selected",String(!bankSel));
+    $("panel-bank").hidden = !bankSel;
+    $("panel-learn").hidden = bankSel;
+    stopPlayback(); closeDock();
+  }
+  tabBank.addEventListener("click",function(){ selectTab("bank"); });
+  tabLearn.addEventListener("click",function(){ selectTab("learn"); });
+  [tabBank,tabLearn].forEach(function(t,i,arr){
+    t.addEventListener("keydown",function(e){
+      if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
+        e.preventDefault(); var other=arr[i===0?1:0]; other.focus(); other.click();
+      }
+    });
+  });
+
+  /* ============================================================
+     BUILT-IN VOICE (screen reading without a screen reader)
+     ============================================================ */
+  var ttsToggle=$("ttsToggle"), ttsLabel=$("ttsLabel");
+  function renderTts(){
+    ttsToggle.setAttribute("aria-pressed", String(TTS.on));
+    ttsLabel.textContent = !TTS.supported ? "음성 안내 미지원 브라우저"
+                          : (TTS.on ? "음성 안내 켜짐 (눌러서 끄기)" : "음성 안내 꺼짐 (눌러서 켜기)");
+  }
+  function setTts(on){
+    TTS.on = !!on && TTS.supported;
+    state.tts = TTS.on; persist(); renderTts();
+    if(TTS.on){ ttsPickVoice(); speak("음성 안내를 켰습니다. 버튼으로 이동하면 이름을 읽어 드립니다.", true); }
+    else if(TTS.supported){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+  }
+  ttsToggle.addEventListener("click", function(){ setTts(!TTS.on); });
+  if(!TTS.supported){ ttsToggle.disabled=true; }
+  TTS.on = state.tts && TTS.supported;
+  renderTts();
+
+  // speak the focused control's name for people navigating without a screen reader
+  var lastFocusName="";
+  document.addEventListener("focusin", function(e){
+    if(!TTS.on) return;
+    var t=e.target; if(!t || t===document.body || t.id==="ttsToggle") return;
+    if(t.dataset && t.dataset.quiet) return;   // number keys / chips: never read aloud (bystander privacy)
+    var name = t.getAttribute("aria-label") || "";
+    if(!name){
+      if(t.tagName==="INPUT") name=(t.getAttribute("placeholder")||"입력란");
+      else name=(t.textContent||"").replace(/\s+/g," ").trim();
+    }
+    var role=t.getAttribute("role");
+    if(role==="tab") name+=", 탭"+(t.getAttribute("aria-selected")==="true"?", 선택됨":"");
+    if(t.hasAttribute("aria-pressed")) name+=(t.getAttribute("aria-pressed")==="true"?", 켜짐":", 꺼짐");
+    if(t.disabled) name+=", 사용 불가";
+    name=name.slice(0,160);
+    if(name && name!==lastFocusName){ lastFocusName=name; speak(name, true); }
+  });
+  // some browsers need a user gesture before speech works
+  function primeSpeech(){
+    if(TTS.on && TTS.supported){ try{ window.speechSynthesis.resume(); }catch(e){} }
+    window.removeEventListener("pointerdown", primeSpeech, true);
+  }
+  window.addEventListener("pointerdown", primeSpeech, true);
+
+  /* ============================================================
+     INIT
+     ============================================================ */
+  $("speedSeg").querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed",String(b.dataset.v===state.speed)); });
+  $("orderSeg").querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed",String(b.dataset.v===state.order)); });
+  orderHint.textContent = state.order==="col" ? "(읽는 순서 1‑2‑3‑4‑5‑6)" : "(읽는 순서 1‑4‑2‑5‑3‑6)";
+  $("signT").setAttribute("aria-pressed",String(state.numberSign));
+  $("repeatT").setAttribute("aria-pressed",String(state.repeat));
+
+  bankLoad();
+  $("acctNoText").textContent = MY_ACCT;
+  maskBalance();
+  setQueue(learnQueue.join(""));
+  selectTab("bank");
+
+  document.addEventListener("visibilitychange",function(){ if(document.hidden){ stopPlayback(); } });
+  $("stopFab").addEventListener("click",function(){ stopPlayback(); sayNow("멈췄습니다."); });
+  $("bdClose").addEventListener("click",function(){ var wasStep=dockMode==="step"; closeDock(); sayNow(wasStep?"점자 입력을 닫았습니다.":"점자 칸을 닫았습니다."); });
+  $("bdPlay").addEventListener("click",function(){
+    if(this.dataset.playing==="1"){ stopPlayback(); return; }
+    if(!dockRaw) return;
+    // plays the number as vibration only — no speech
+    startNumberPlay(this, dockRaw, { group: !dockOpts || dockOpts.group!==false, sign:false }, $("bdStrip"));
+  });
+  $("bdCommit").addEventListener("click", dockCommit);
+  $("bdErase").addEventListener("click", dockErase);
+  $("bdBack").addEventListener("click", dockErase);
+  // ‹ › : page the strip one screenful in READ mode; step the digit in INPUT mode
+  //       (press-and-hold auto-repeats only when stepping digits)
+  (function(){
+    function navAct(delta){ if(dockMode==="step") dockStep(delta); else dockPageGo(delta); }
+    [["bdPrev",-1],["bdNext",1]].forEach(function(pair){
+      var btn=$(pair[0]), delta=pair[1], rep=null, held=false;
+      btn.addEventListener("pointerdown",function(){
+        held=true; navAct(delta);
+        clearInterval(rep);
+        rep=setInterval(function(){ if(dockMode==="step") dockStep(delta); }, 300);
+      });
+      var stop=function(){ clearInterval(rep); rep=null; setTimeout(function(){ held=false; }, 60); };
+      btn.addEventListener("pointerup",stop);
+      btn.addEventListener("pointerleave",stop);
+      btn.addEventListener("pointercancel",stop);
+      btn.addEventListener("click",function(){ if(!held) navAct(delta); });  // keyboard
+    });
+  })();
+  window.addEventListener("resize", function(){ sizeDock(); if(dockMode==="read" && !$("brailleDock").hidden){ dockMeasure(); dockPage=0; $("bdStrip").scrollLeft=0; dockUpdateNav(); } });
+})();
+</script>
